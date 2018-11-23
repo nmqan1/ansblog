@@ -27,7 +27,7 @@ jdecent:
   initial:      jdecent
   name:         "Jekyll Decent"       
   cover:        /assets/mountain-alternative-cover.jpg  
-  picture:      /assets/johndoe.jpg  
+  #picture:      /assets/johndoe.jpg  
   bio:          This is my bio!
   location:     Germany
   email:        "-"   
