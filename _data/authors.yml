@@ -23,16 +23,7 @@ default:                                                      # Fallback if noth
   twitch:                                                     # OPTIONAL: used in the about page
   s500px:                                                     # OPTIONAL: used in the about page
   reddit:                                                     # OPTIONAL: used in the about page
-jdecent:
-  initial:      jdecent
-  name:         "Jekyll Decent"       
-  cover:        /assets/mountain-alternative-cover.jpg  
-  #picture:      /assets/johndoe.jpg  
-  bio:          This is my bio!
-  location:     Germany
-  email:        "-"   
-  twitter:      "-"    
-  twitch:       "-"
+
 nmqan:
   initial:      nmqan
   name:         "An Nguyen"        
