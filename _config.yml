@@ -24,7 +24,7 @@ sass:
 markdown: kramdown
 kramdown:
   syntax_highlighter_opts:
-    disable: true
+    disable: false
 include: ['_pages']
 exclude: [vendor, "developer-tools"]
 plugins:
@@ -38,5 +38,5 @@ compress_html:
   comments: ["<!-- ", " -->"]
   ignore:
     envs: [local]
-  blanklines: true
+  blanklines: false
   startings: [head, body]
