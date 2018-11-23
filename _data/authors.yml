@@ -24,12 +24,12 @@ default:                                                      # Fallback if noth
   s500px:                                                     # OPTIONAL: used in the about page
   reddit:                                                     # OPTIONAL: used in the about page
 jdecent:
-  initial:      jdecent
-  name:         "Jekyll Decent"       
+  initial:      nmqan
+  name:         "An Nguyen"       
   cover:        /assets/mountain-alternative-cover.jpg  
   picture:      /assets/johndoe.jpg  
   bio:          This is my bio!
-  location:     Germany
+  location:     United States
   email:        "-"   
   twitter:      "-"    
   twitch:       "-"
