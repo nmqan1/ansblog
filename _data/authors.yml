@@ -33,12 +33,12 @@ jdecent:
   email:        "-"   
   twitter:      "-"    
   twitch:       "-"
-jwillmer:
-  initial:      jwillmer
-  name:         "Jens Willmer"        
-  picture:      /assets/jwillmer.jpg  
-  bio:          All about technology 
-  location:     Germany 
-  website:      "http://jwillmer.de/cv" 
-  twitter:      jenswillmer
-  github:       jwillmer
+nmqan:
+  initial:      nmqan
+  name:         "An Nguyen"        
+  #picture:      /assets/jwillmer.jpg  
+  bio:          Learner 
+  location:     United State 
+  website:      "https://nmqan1.github.io/ansblog" 
+  #twitter:      jenswillmer
+  github:       nmqan1
