@@ -26,18 +26,18 @@ default:                                                      # Fallback if noth
 nmqan:
   initial:      an
   name:         "An Nguyen"        
-  #picture:      /assets/jwillmer.jpg  
+  picture:      #url to avatar here
   bio:          Learner 
   location:     United State 
   website:      "https://nmqan1.github.io/ansblog" 
-  #twitter:      jenswillmer
+  twitter:      
   github:       nmqan1
 felix
   initial:      FN
   name:         "Felix Nguyen"        
-  #picture:      /assets/jwillmer.jpg  
+  picture:       
   bio:          Fat 
   location:     United State 
   website:      "https://felixnguyen31.github.io/" 
-  #twitter:      jenswillmer
+  #twitter:     
   github:       felixnguyen31
