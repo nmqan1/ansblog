@@ -38,5 +38,5 @@ compress_html:
   comments: ["<!-- ", " -->"]
   ignore:
     envs: [local]
-  blanklines: false
+  blanklines: true
   startings: [head, body]
