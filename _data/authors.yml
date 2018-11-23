@@ -1,5 +1,5 @@
 default:                                                      # Fallback if nothing is specified
-  initial:      nmqan                                   # used for author lookup in posts and for first two characters in the about page back button
+  initial:      an                                   # used for author lookup in posts and for first two characters in the about page back button
   name:         "An Nguyen"                               # used to display author name
   cover:        /assets/mountain-alternative-cover.jpg        # OPTIONAL: defines location of cover image in about page
   #picture:      /assets/johndoe.jpg                           # OPTIONAL: author picture
@@ -23,18 +23,8 @@ default:                                                      # Fallback if noth
   twitch:                                                     # OPTIONAL: used in the about page
   s500px:                                                     # OPTIONAL: used in the about page
   reddit:                                                     # OPTIONAL: used in the about page
-jdecent:
-  initial:      nmqan
-  name:         "An Nguyen"       
-  cover:        /assets/mountain-alternative-cover.jpg  
-  picture:      /assets/johndoe.jpg  
-  bio:          This is my bio!
-  location:     United States
-  email:        "-"   
-  twitter:      "-"    
-  twitch:       "-"
 nmqan:
-  initial:      nmqan
+  initial:      an
   name:         "An Nguyen"        
   #picture:      /assets/jwillmer.jpg  
   bio:          Learner 
@@ -42,3 +32,12 @@ nmqan:
   website:      "https://nmqan1.github.io/ansblog" 
   #twitter:      jenswillmer
   github:       nmqan1
+felix
+  initial:      FN
+  name:         "Felix Nguyen"        
+  #picture:      /assets/jwillmer.jpg  
+  bio:          Fat 
+  location:     United State 
+  website:      "https://felixnguyen31.github.io/" 
+  #twitter:      jenswillmer
+  github:       felixnguyen31
