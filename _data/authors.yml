@@ -25,7 +25,8 @@ default:                                                      # Fallback if noth
   reddit:                                                     # OPTIONAL: used in the about page
 nmqan:
   initial:      an
-  name:         "An Nguyen"        
+  name:         "An Nguyen"
+  cover:        /assets/mountain-alternative-cover.jpg  
   picture:      #url to avatar here
   bio:          Learner 
   location:     United State 
@@ -34,7 +35,8 @@ nmqan:
   github:       nmqan1
 felix:
   initial:      FN
-  name:         "Felix Nguyen"        
+  name:         "Felix Nguyen"
+  cover:        /assets/mountain-alternative-cover.jpg  
   picture:       
   bio:          Fat 
   location:     United State 
