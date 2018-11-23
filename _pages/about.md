@@ -1,7 +1,7 @@
 ---
 layout:    about
 permalink: "/about"
-author:    an
+author:    nmqan
 keywords:  about person
 title:     About An Nguyen
 menutitle: About
