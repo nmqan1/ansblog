@@ -3,7 +3,7 @@ default:                                                      # Fallback if noth
   name:         "An Nguyen"                               # used to display author name
   cover:        /assets/mountain-alternative-cover.jpg        # OPTIONAL: defines location of cover image in about page
   #picture:      /assets/johndoe.jpg                           # OPTIONAL: author picture
-  bio:          This is my bio!                               # OPTIONAL: text below author name in posts
+  bio:          "/æn ŋwɪn/"                               # OPTIONAL: text below author name in posts
   location:     United States                                       # OPTIONAL: used to display location of the author
   website:                          						  # OPTIONAL: link to the author of a post
   email:        amnguyen5@wisc.edu                                              # OPTIONAL: used in the about page
@@ -28,7 +28,7 @@ nmqan:
   name:         "An Nguyen"
   cover:        /assets/mountain-alternative-cover.jpg  
   picture:      #url to avatar here
-  bio:          Learner 
+  bio:           "/æn ŋwɪn/" 
   location:     United State 
   website:      "https://nmqan1.github.io/ansblog" 
   twitter:      
