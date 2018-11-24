@@ -1,7 +1,7 @@
 nmqan:
-    profile: "An is a "
+    profile: "A challenge seeker."
     skills:
-        - "Talent Management, Organization Development, Employee Engagement"
+        - "Talent Management, Organization Development, Employee Engagement, Data Analysis"
         - "SQL, Tableau, R"
     education:
         - time:             "20018 - 2020"
@@ -40,7 +40,7 @@ nmqan:
         - time:             "02.2016 - 03.2017"
           team:             "..."
           title:            "Corporate Culture"
-          technologies:     "C#, JavaScript, HTML5, CSS"
+          technologies:     "Corporate Culture | Change Management | Organization Effectiveness | Talent Managemnt | Leadership Competency Development"
           responsibilities:
             - "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec aliquet finibus libero sed ullamcorper. Donec."
             - "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed sed."
