@@ -1,12 +1,13 @@
 nmqan:
-    profile: "A challenge seeker."
+    profile: "A challenge seeker, an eager learner and a"
     skills:
         - "Talent Management, Organization Development, Employee Engagement, Data Analysis"
         - "SQL, Tableau, R"
     education:
         - time:             "20018 - 2020"
           location:         "University of Wisconsin - Madision, WI, USA"
-          description:      "Master of Business Administration, Strategic Human Resource Management| Wisconsin Distinguished Graduate Fellowship Recipient "
+          description:      "Master of Business Administration, Strategic Human Resource Management
+          Wisconsin Distinguished Graduate Fellowship Recipient "
         - time:             "20011 - 2015"
           location:         "Foreign Trade University, Ho Chi Minh City, Vietnam"
           description:      "Bachelor of Economics"
