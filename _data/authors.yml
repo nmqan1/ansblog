@@ -1,6 +1,6 @@
 default:                                                      # Fallback if nothing is specified
   initial:      an                                   # used for author lookup in posts and for first two characters in the about page back button
-  name:         "An Nguyen"                               # used to display author name
+  name:         "An Nguyen"                             # used to display author name
   cover:        /assets/mountain-alternative-cover.jpg        # OPTIONAL: defines location of cover image in about page
   picture:      /assets/an.jpg                           # OPTIONAL: author picture
   bio:          "/æn ŋwɪn/"                               # OPTIONAL: text below author name in posts
