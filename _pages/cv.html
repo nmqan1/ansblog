@@ -68,17 +68,19 @@ excerpt:   This page contains the résumé of the author.
 
 {% for project in cv.projects %}
 <div class="md-card shadow project">
-   <div class="content">
     <div class="meta">
      <h2>{{project.title}}</h2>
      <div class="time">{{project.time}}</div>
     </div>
-        <sit>{{project.team}}</sit>
+   <div class="content">
+       <div class="team">{{project.team}}</div>
         <ul>
             {% for responsibility in project.responsibilities %}
             <li>{{responsibility}}</li>
             {% endfor %}
         </ul>
+        </div>
+
     </div>
     <div class="footer">
         <ul>
