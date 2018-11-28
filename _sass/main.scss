@@ -12,7 +12,7 @@
         .page-title a,
         .page-description,
         .nav a {
-            color: $color-black;
+            color: $color-white;
             text-shadow: 1px 1px 5px rgba($color-black, 0.5);
         }
 
@@ -64,7 +64,8 @@
             word-spacing: 15px;
             line-height: 1.2;
             text-decoration: none;
-            text-shadow: 1px 1px 5px rgba($color-black, 0.3);
+            color: $color-black;
+            text-shadow: 1px 1px 5px rgba($color-white, 0.3);
         }
     }
 
