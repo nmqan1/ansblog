@@ -16,7 +16,7 @@ baseurl:          "/ansblog" # the subpath of your site, e.g.
 url:              "https://nmqan1.github.io" # the base hostname & protocol for your site. Have a look at robots.txt as well!
 permalink:        /blog/:categories/:title
 cover:            /assets/madison_cover.jpg
-disqus_shortname: "jekylldecent"
+disqus_shortname: 
 
 # Build settings
 sass:
