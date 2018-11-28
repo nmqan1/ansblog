@@ -5,7 +5,7 @@ author:    nmqan
 keywords:  about blog
 title:     About An's Blog
 menutitle: About An's Blog
-weight:    90
+weight:    60
 excerpt:   Brief description of An's Blog.
 --- 
 
