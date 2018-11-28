@@ -7,9 +7,9 @@
 
 # Site settings
 title:            An's Blog
-subtitle:         Just another blog about random things
-description:      This is the jekyllTheme example blog. It only exists to demonstrate how the theme looks and feels.
-keywords:         demo theme example github jekyll features
+subtitle:         #
+description:      This is An's Blog for random topics how to improve HR decisions
+keywords:         #
 language:         "en" # default language of the blog. Language codes: http://www.w3schools.com/tags/ref_language_codes.asp
 
 baseurl:          "/blog" # the subpath of your site, e.g. 
