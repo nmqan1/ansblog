@@ -144,20 +144,19 @@
     .meta {
         display: flex;
         justify-content: space-between;
-
-        .team {
-            color: #bbb;
-            font-size: 12px;
-            font-style: italic;
-        }
-
         .time {
             color: $color-cv-blue;
             font-size: 1.5rem;
             margin-left: 0.8rem;
         }
     }
-
+    .content {
+            .team {
+            color: #bbb;
+            font-size: 12px;
+                font-style: italic;
+            }
+        }
     .footer {
         display: flex;
         justify-content: space-between;
