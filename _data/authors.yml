@@ -1,7 +1,7 @@
 default:                                                      # Fallback if nothing is specified
   initial:      an                                   # used for author lookup in posts and for first two characters in the about page back button
   name:         "An Nguyen"                             # used to display author name
-  cover:        /assets/mountain-alternative-cover.jpg        # OPTIONAL: defines location of cover image in about page
+  cover:        /assets/hochiminh_cover.jpg        # OPTIONAL: defines location of cover image in about page
   picture:      /assets/an.jpg                           # OPTIONAL: author picture
   bio:          "/æn ŋwɪn/"                               # OPTIONAL: text below author name in posts
   location:     United States                                       # OPTIONAL: used to display location of the author
@@ -26,7 +26,7 @@ default:                                                      # Fallback if noth
 nmqan:
   initial:      AN
   name:         "An Nguyen"
-  cover:        /assets/mountain-alternative-cover.jpg  
+  cover:        /assets/hochiminh_cover.jpg  
   picture:      /assets/an.jpg
   bio:           "/æn ŋwɪn/" 
   location:     United States
@@ -36,7 +36,7 @@ nmqan:
 felix:
   initial:      FN
   name:         "Felix Nguyen"
-  cover:        /assets/mountain-alternative-cover.jpg  
+  cover:        /assets/hochiminh_cover.jpg  
   picture:       
   bio:          Fat 
   location:     United States
