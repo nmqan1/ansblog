@@ -24,7 +24,7 @@ default:                                                      # Fallback if noth
   s500px:                                                     # OPTIONAL: used in the about page
   reddit:                                                     # OPTIONAL: used in the about page
 nmqan:
-  initial:      an
+  initial:      AN
   name:         "An Nguyen"
   cover:        /assets/mountain-alternative-cover.jpg  
   picture:      /assets/an.jpg
