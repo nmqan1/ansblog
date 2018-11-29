@@ -1,5 +1,5 @@
 nmqan:
-    profile: "An eager learner and a challenge seeker"
+    profile: "An eager learner and a challenge seeker."
     skills:
         - "Talent Management, Organization Development, Employee Engagement, Data Analysis"
         - "SQL, Tableau, R"
@@ -7,8 +7,7 @@ nmqan:
         - time:             "2018 - 2020"
           location:         "University of Wisconsin - Madision, WI, USA"
           description:      "Master of Business Administration, Strategic Human Resource Management"
-          description:      "Wisconsin Distinguished Graduate Fellowship Recipient"
-        - time:             "20011 - 2015"
+        - time:             "2011 - 2015"
           location:         "Foreign Trade University, Ho Chi Minh City, Vietnam"
           description:      "Bachelor of Economics"
     employment:
@@ -39,13 +38,14 @@ nmqan:
             - "Partnered with external expert to conduct group discussion to define Core Values, Mission, Vision, and 5-year Strategy for the school."
     projects:
         - time:             "02.2016 - 03.2017"
-          team:             "FE Credit was a market leader in consumer finance in Vietnam after spinning off as an independent business entity from its mother bank. Realizing it was critical to institutionalize the business, the company decided to enter a transformation journey beginning with defining its culture. I was recruited in a Leadership Development Program and was exposed to the project in their early stages. "
+          team:             "FE Credit was the market leader in consumer finance in Vietnam after spinning off as an independent business entity from its mother bank. Realizing it was critical to institutionalize the business, the company decided to enter a transformation journey beginning with defining its culture. I was recruited in a Leadership Development Program and was exposed to the project in their early stages. "
           title:            "Corporate Culture - FE CREDIT"
           technologies:     "Corporate Culture | Change Management | Organization Effectiveness | Talent Managemnt | Leadership Competency Development"
           responsibilities:
-            - "Advised the consulting firm on tailoring project's standard strategy into company's specific situation.///"
-            - "Gathered FE CREDIT and made informed recommendations for project team.///"
-            - "Managed budget for all of communication activities throughout the company."
+            - "The project went through 3 phases: Diagnosis, Design and 
+            - "Reviewed and advised on the project strategies to diagnose the organization through survey, focus group discussion, C-suite interview."
+            - "Assessed the initial results and co-authored initial set of values."
+            - "Initiated and oversaw company-wide change managment campaign including: (1) Trianincommunicating to employees through Culture Ambassadors"
         - time:             "04.2018 - 07.2018"
           team:             "OCB had developed an Information System for Performance Management System in 2014, which is relatively progressive in Vietnam back then. Despite the Information System (IS) was still in its infancy stage, the company had not invested further resource to renovate it. The system ran into serveral problems including (1) not catching up with needs from various functions, (2) bulky and static back-end data that needs updating seminannually, (3) not aligning with company's overall business strategy, (4) not user-friendly, thus low level of self-servicing, (5) lack of compatibility with other HRIS modules. I was in main charge of the company's performance management system and I saw the latent issues when starting a new cycle without making changes to the system. Thus, I initiate the project to renovate the IS in coordiation with other stakeholders and end-users."
           title:            "Performance Management System Re-energization - ORIENT COMMERCIAL BANK"
