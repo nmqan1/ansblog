@@ -6,9 +6,9 @@ default:                                                      # Fallback if noth
   bio:          "/an ŋwɪn/"                               # OPTIONAL: text below author name in posts
   location:     United States                                       # OPTIONAL: used to display location of the author
   website:                          						  # OPTIONAL: link to the author of a post
-  email:        amnguyen5@wisc.edu                                              # OPTIONAL: used in the about page
+  email:        "amnguyen5@wisc.edu"                                              # OPTIONAL: used in the about page
   twitter:                                                    # OPTIONAL: used in the about page
-  linkedin:      https://www.linkedin.com/in/nmqan/                                             # OPTIONAL: used in the about page
+  linkedin:      "https://www.linkedin.com/in/nmqan/"                                             # OPTIONAL: used in the about page
   xing:                                                       # OPTIONAL: used in the about page
   github:                                                     # OPTIONAL: used in the about page
   stackoverflow:                                              # OPTIONAL: used in the about page
