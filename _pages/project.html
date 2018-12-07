@@ -1,1 +1,40 @@
-#testing
+project.html
+---
+layout:    about
+permalink: "/project"
+author:    nmqan
+keywords:  Project
+title:     An Nguyen's Project
+menutitle: Project
+weight:    70
+excerpt:   Past and on-going project.
+---
+{% assign project = site.pages.project[page.author] %}
+
+<h2 class="project-heading">Project History</h2>
+
+{% for project in cv.projects %}
+<div class="md-card shadow project">
+    <div class="meta">
+     <h2>{{project.title}}</h2>
+     <div class="time">{{project.time}}</div>
+    </div>
+   <div class="content">
+       <div class="team">{{project.team}}</div>
+        <ul>
+            {% for responsibility in project.responsibilities %}
+            <li>{{responsibility}}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="footer">
+        <ul>
+            {% assign technologies = project.technologies | split: ',' %}
+            {% for technology in technologies %}
+            <li> {{ technology }}</li>
+            {% endfor %}
+        </ul>
+        <span class="icon-briefcase"></span>
+    </div>
+</div>
+{% endfor %}
