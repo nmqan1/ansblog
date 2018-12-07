@@ -8,7 +8,7 @@ default:                                                      # Fallback if noth
   website:                          						  # OPTIONAL: link to the author of a post
   email:        "amnguyen5@wisc.edu"                                              # OPTIONAL: used in the about page
   twitter:                                                    # OPTIONAL: used in the about page
-  linkedin:      "https://www.linkedin.com/in/nmqan/"                                             # OPTIONAL: used in the about page
+  linkedin:      nmqan                                             # OPTIONAL: used in the about page
   xing:                                                       # OPTIONAL: used in the about page
   github:                                                     # OPTIONAL: used in the about page
   stackoverflow:                                              # OPTIONAL: used in the about page
@@ -35,7 +35,7 @@ nmqan:
   github:       nmqan1
   email:        "amnguyen5@wisc.edu"                                              # OPTIONAL: used in the about page
   twitter:                                                    # OPTIONAL: used in the about page
-  linkedin:      "https://www.linkedin.com/in/nmqan/"                                             # OPTIONAL: used in the about page
+  linkedin:      nmqan                                           # OPTIONAL: used in the about page
 felix:
   initial:      FN
   name:         "Felix Nguyen"
