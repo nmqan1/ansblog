@@ -37,6 +37,18 @@ nmqan:
             - "Oversaw end-to-end process and advised 40 expatriate employees to legalize their residency in Vietnam."
             - "Partnered with external expert to conduct group discussion to define Core Values, Mission, Vision, and 5-year Strategy for the school."
     projects:
+        - time:             "Ongoing"
+          team:             "I am self-teaching some data science techniques and finding source of data to experiment with. I will update as the project goes. "
+          title:            "Data Science - INDEPENDENT"
+          technologies:     "R"
+          responsibilities:
+            #- "Gathered expectations from top leaders for the new systems; collected end-user's feedback and requirements for the system's change."
+            #- "Prioritized requirements in terms of business strategy, current resources and system compatibility; proposed technology alternatives."
+            #- "Translated requirements into project specifications and logical flows; formulated one-year project plan for information technology development and testing."
+            #- "Oversaw project development phases for system change and ensured its quality and timeline."
+            #- "Organized and facilitated coaching sessions for managers so that they can understand the needs for upcoming changes and master the way to navigate in the new system."
+            #- "Developed a series of supporting channels and materials for managers on performance evaluation process and principles; conducted one-on-one consultation on manager's request."
+            #- "Coordinated with internal stakeholders to compile employee performance's data."
         - time:             "04.2018-07.2018"
           team:             "OCB had developed an Information System for Performance Management in 2014, which is relatively progressive in Vietnam back then. Despite the information system was still in its infancy stage, the company had not invested further resource to renovate it. The system ran into serveral problems including (1) not catching up with needs from various functions, (2) bulky and static back-end data that needs updating seminannually, (3) not aligning with company's overall business strategy, (4) not user-friendly, thus low level of self-servicing, (5) lack of compatibility with other HRIS modules. I was in main charge of the company's performance management system and I saw the latent issues at the beginning of the cycle. Thus, I launched the project to renovate the information system."
           title:            "Re-energizing Performance Management System - ORIENT COMMERCIAL BANK"
