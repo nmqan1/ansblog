@@ -18,7 +18,7 @@ nmqan:
           responsibility:
             - "Mined internal employee inquiries data using Python and Yammer API; applied NLP (Latent Dirichlet Allocation topic modeling) technique to discover current top concerns and issues."
             - "Worked with internal client to enhance new employees’ experience through a new onboarding survey using output from Workday and the platform by Qualtrics, replacing the offline Word-based version; built automated dashboards in Tableau for analysis, metrics and trends."
-            - "Worked with internal client to enhance new employees’ experience through a new onboarding survey using output from Workday and the platform by Qualtrics, replacing the offline Word-based version; built automated dashboards in Tableau for analysis, metrics and trends."
+            - "Researched and designed survey items to measure innovation for benchmarking, engagement and training purposes."
         - time:             "06.2017 - 08.2018"
           location:         "Ho Chi Minh City, Vietnam"
           company:          "Orient Commercial Joint Stock Bank"
