@@ -1,16 +1,24 @@
 nmqan:
-    profile: "Eager learner. Analytics Enthusiast. Challenge Seeker. Early-adopter wannabe."
+    profile: "A recent MBA graduate from UW-Madison with experience in HRIS and Business Analytics and interest in data-driven roles."
     skills:
-        - "Talent Management, Organization Development, Employee Engagement, Data Analysis"
-        - "SQL, Tableau, R"
+        - "HRIS, Data Wrangling, Data Visualization,  Regression Modeling (OLS, ANOVA, Logistics), Machine Learning, NLP (Text Analytics, Sentiment Analysis), Bayesian Statistics, Causal Inference, Survey & Experiment Design, Web Scraping , Project Management, Optimization, Workforce Analytics, Employee Engagement, Performance Analytics.."
+        - "Python, R, SQL, VBA, MATLAB"
     education:
         - time:             "2018 - 2020"
           location:         "University of Wisconsin - Madision, WI, USA"
-          description:      "Master of Business Administration, Strategic Human Resource Management"
+          description:      "Master of Business Administration, minor in Quantitative Methods for Social Sciences."
         - time:             "2011 - 2015"
           location:         "Foreign Trade University, Ho Chi Minh City, Vietnam"
           description:      "Bachelor of Economics"
     employment:
+        - time:             "05.2019 - 08.2019"
+          location:         "Madison, WI, USA"
+          company:          "American Family Insurance"
+          position:         "People Analytics Intern"
+          responsibility:
+            - "Mined internal employee inquiries data using Python and Yammer API; applied NLP (Latent Dirichlet Allocation topic modeling) technique to discover current top concerns and issues."
+            - "Worked with internal client to enhance new employees’ experience through a new onboarding survey using output from Workday and the platform by Qualtrics, replacing the offline Word-based version; built automated dashboards in Tableau for analysis, metrics and trends."
+            - "Worked with internal client to enhance new employees’ experience through a new onboarding survey using output from Workday and the platform by Qualtrics, replacing the offline Word-based version; built automated dashboards in Tableau for analysis, metrics and trends."
         - time:             "06.2017 - 08.2018"
           location:         "Ho Chi Minh City, Vietnam"
           company:          "Orient Commercial Joint Stock Bank"
