@@ -2,7 +2,8 @@ nmqan:
     profile: "A recent MBA graduate from UW-Madison with experience in HRIS and Business Analytics and interest in data-driven roles."
     skills:
         - "HRIS, Data Wrangling, Data Visualization,  Regression Modeling (OLS, ANOVA, Logistics), Machine Learning, NLP (Text Analytics, Sentiment Analysis), Bayesian Statistics, Causal Inference, Survey & Experiment Design, Web Scraping , Project Management, Optimization, Workforce Analytics, Employee Engagement, Performance Analytics.."
-        - "Python, R, SQL, VBA, MATLAB"
+        - "Language: Python, R, SQL, VBA, MATLAB"
+        - "Software: Tableau, SPSS, R-Shiny, Visio, MS Access, Qualtrics, Office Suite"
     education:
         - time:             "2018 - 2020"
           location:         "University of Wisconsin - Madision, WI, USA"
@@ -15,7 +16,7 @@ nmqan:
           location:         "Madison, WI, USA"
           company:          "American Family Insurance"
           position:         "People Analytics Intern"
-          responsibility:
+          responsibilities:
             - "Mined internal employee inquiries data using Python and Yammer API; applied NLP (Latent Dirichlet Allocation topic modeling) technique to discover current top concerns and issues."
             - "Worked with internal client to enhance new employees’ experience through a new onboarding survey using output from Workday and the platform by Qualtrics, replacing the offline Word-based version; built automated dashboards in Tableau for analysis, metrics and trends."
             - "Researched and designed survey items to measure innovation for benchmarking, engagement and training purposes."
@@ -24,18 +25,17 @@ nmqan:
           company:          "Orient Commercial Joint Stock Bank"
           position:         "Senior Human Resource Project Specialist"
           responsibilities:
-            - "Reenegineered Performance Management process and information system."
-            - "Provided coaching sessions for back-office and sales managers."
-            - "Devised the design, implementation, analysis, and communication of employee engagement survey."
-            - "Reengineered core competencies framework."
+            - "Led company-wide Performance Appraisal System project, partnered with IT Department to renovate HRIS Performance Appraisal module design, streamline policies, and standardize HR databases for 3,000+ employees."
+            - "Designed, A/B tested, and implemented the Voice of Employee system, used statistical tools to analyze the results, proposed transformation plan from collected results including diversifying engagement activities, reviewing salary and bonus policy for back-office employees, and enhancing sales force career roadmap."
+            - "Led a team of three to revise core competencies framework, with results applicable to selection methods, individual development processes for 30 recent graduates, and succession planning for approximately 50 branch managers."
         - time:             "01.2016 - 06.2017"
           location:         "Ho Chi Minh City, Vietnam"
           company:          "Vietnam Prosperity Bank Financial Company, FE CREDIT"
-          position:         "Management Associate - Human Resources"
+          position:         "Leadership Development Program – Organization Development & Analytics"
           responsibilities:
-            - "Established processes, policies, and regulations for Individual Development Plan."
-            - "Consulted with a top-notched management consulting firm on surveys, data analysis, and in-depth interviews to create a new set of company core values, practice standards, and Leadership Competencies."
-            - "Designed Sales Functional Competency framework."
+            - "Established processes, policies, and regulations for Individual Development Plan that were implemented to 1,000+ employees, reorganizing data for training needs, and ensuring employees’ development of all levels."
+            - "Consulted with a top-notched management consulting firm on surveys, data analysis, and in-depth interviews to create a new set of company core values, practice standards, and Leadership Competencies; led the design and execution of company-wide transformation programs to align with newly created core values."
+            - "on surveys, data analysis, and in-depth interviews to create a new set of company core values, practice standards, and Leadership Competencies; led the design and execution of company-wide transformation programs to align with newly created core values."
         - time:             "07.2015 - 01.2016"
           location:         "Ho Chi Minh City, Vietnam"
           company:          "American International School"
@@ -45,12 +45,11 @@ nmqan:
             - "Oversaw end-to-end process and advised 40 expatriate employees to legalize their residency in Vietnam."
             - "Partnered with external expert to conduct group discussion to define Core Values, Mission, Vision, and 5-year Strategy for the school."
     projects:
-        - time:             "Ongoing"
-          team:             "I am self-teaching some data science techniques and finding source of data to experiment with. I will update as the project goes. "
-          title:            "Data Science - INDEPENDENT"
+        - time:             "Spring 2020"
+          title:            "Analysis of Opower’s Home Energy Report "
           technologies:     "R"
           responsibilities:
-            #- "Gathered expectations from top leaders for the new systems; collected end-user's feedback and requirements for the system's change."
+            #- "Opwer Home Energy Report Program is an initiative to help reduce the amount of energy used by each household. To analyze the observational data of the program, a handful of identification strategy were applied to panel data over 2 years (Simple Difference, Difference-in-Difference, Fixed Effects, Lagged Dependent Variables, Random Encouragement Design and Matching). The results exhibit a moderate effect of the program; the user with higher volume, the more effective is the program."
             #- "Prioritized requirements in terms of business strategy, current resources and system compatibility; proposed technology alternatives."
             #- "Translated requirements into project specifications and logical flows; formulated one-year project plan for information technology development and testing."
             #- "Oversaw project development phases for system change and ensured its quality and timeline."
