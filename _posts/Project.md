@@ -1,0 +1,1853 @@
+---
+title: 'London Housing Values based on yearly and monthly variables'
+author: "An Nguyen"
+date: "01 June, 2020"
+output:
+  html_document:
+    highlight: haddock
+    keep_md: yes
+    theme: spacelab
+    toc: yes
+    toc_float: yes
+  word_document:
+    toc: yes
+  md_document:
+    variant: markdown_github
+---
+##1. Introduction
+Housing prices has long been a well-discussed and long-studied economic issue in both literature and in business context. This project investigates the effect of both level-1 and level-2 variables on housing prices at borough levels in London. The data consists of 17-year record of house purchases history by borough, salary of residents in the area, job statistics, crime statistics, population size and area size. 
+
+
+##2. Data Description
+The data is a 17-year long record of 33 boroughs in London with yearly and monthly variables. The yearly variables include: (1)Yearly number of houses, (2) Yearly number of houses sold, (3) Yearly life satisfaction, (4) Yearly median salary of the residents of the area, (5) Yearly mean salary of the residents of the area, (6) Yearly percentage of households that recycle, (7) Yearly number of jobs, (8) Yearly number of people living in the area. The monthly variables include: (1) Monthly average house prices - dependent variable, (2) Monthly number of crimes committed, (3) Area size in hectares. 
+
+This data can be retrieved from [Kaggle][1].
+
+###2.1 Setting up R and cleaning data
+
+```r
+rm(list = ls())
+```
+
+
+```r
+#Function %notin%
+`%notin%` <- Negate(`%in%`)
+```
+
+
+```r
+# This first code chunk is the "setting" code chunk
+# Set up knit file
+knitr::opts_chunk$set(warning = F, 
+                      message = F)
+```
+
+
+```r
+# number display options
+options(expressions=10000)
+options(digits=4)
+options(scipen=4)
+# 000 separated commas
+knitr::knit_hooks$set(inline = function(x) {
+  prettyNum(x, big.mark=",")
+})
+# Set Code chunk font size
+def.chunk.hook  <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- def.chunk.hook(x, options)
+  ifelse(options$size != "normalsize", 
+         paste0("\\", options$size,"\n\n", x, "\n\n \\normalsize"), x)
+})
+```
+
+
+```r
+library(magrittr)
+library(kableExtra)
+library(knitr)
+library(dplyr)
+library(tidyr)
+library(lubridate)
+library(scales)
+library(ggplot2)
+library(SparkR)
+library(psych)
+library(fastDummies)
+library(stats)
+library(lfe)
+library(lmtest)
+library(plm)
+library(gridExtra)
+library(lme4)
+library(mice)
+library(nlme)
+# and more packages that you want to use
+# note that you must install these already using install.packages()
+```
+
+
+
+```r
+df.year <- read.csv("housing_in_london_yearly_variables.csv")
+df.month <- read.csv("housing_in_london_monthly_variables.csv")
+```
+
+
+```r
+#Create year variable in df.month so as key to merge with df.year
+df.month$year  <- format(as.Date(df.month$date), "%Y")
+df.month$yearmonth <- format(as.Date(df.month$date), "%Y-%m")
+df.year$year <- format(as.Date(df.year$date), "%Y")
+
+#Change the variable year from format character to numeric
+df.year$year <- as.numeric(df.year$year)
+df.month$year <- as.numeric(df.month$year)
+
+# Some variables  are read as factor
+df.year$mean_salary <- as.numeric(levels(df.year$mean_salary))[df.year$mean_salary]
+df.year$recycling_pct <- as.numeric(levels(df.year$recycling_pct))[df.year$recycling_pct]
+
+#Filter only borough
+df.month <- df.month[df.month$borough_flag==1,]
+df.year <- df.year[df.year$borough_flag==1,]
+
+#Create lag variable. 2000 is the lag for 2001. so it needs to be done before deleting 2000
+#lag 1 month variable
+
+df.month <- df.month %>%
+  dplyr::group_by(code) %>%
+  dplyr::mutate(lag1month = dplyr::lag(average_price, 1, default = NA))
+
+df.month %>%
+  dplyr::group_by(code) %>%
+  dplyr::mutate(lag1month = dplyr::lag(average_price, 1, default = NA))
+```
+
+```
+## # A tibble: 9,936 x 10
+## # Groups:   code [34]
+##    date  area  average_price code  houses_sold no_of_crimes borough_flag
+##    <fct> <fct>         <int> <fct>       <int>        <dbl>        <int>
+##  1 1995~ city~         91449 E090~          17           NA            1
+##  2 1995~ city~         82203 E090~           7           NA            1
+##  3 1995~ city~         79121 E090~          14           NA            1
+##  4 1995~ city~         77101 E090~           7           NA            1
+##  5 1995~ city~         84409 E090~          10           NA            1
+##  6 1995~ city~         94901 E090~          17           NA            1
+##  7 1995~ city~        110128 E090~          13           NA            1
+##  8 1995~ city~        112329 E090~          14           NA            1
+##  9 1995~ city~        104473 E090~          17           NA            1
+## 10 1995~ city~        108038 E090~          14           NA            1
+## # ... with 9,926 more rows, and 3 more variables: year <dbl>,
+## #   yearmonth <chr>, lag1month <int>
+```
+
+```r
+df.month <- as.data.frame(df.month)
+
+#Filter out 1999, 2019 because it does not have number of job. Filter out 2000 because it does not have area, no_of_house
+df.year <- df.year[df.year$year %notin% c(1999,2000,2019),]
+
+df.month <- subset(df.month, year > 2000 & year <2019)
+```
+
+#### Merging, cleaning, creating new variables
+
+After exploring the data, I merge the two datasets into one and creating new neccessa
+
+```r
+df <- merge(dplyr::select(df.month,date,code, average_price, houses_sold, 
+                          no_of_crimes, year,yearmonth, lag1month),
+      dplyr::select(df.year,code, median_salary, mean_salary, recycling_pct, population_size, 
+             number_of_jobs, area_size, no_of_houses, year)
+      , by = c("year","code"))
+```
+
+
+#### Create new variables
+
+```r
+#Average price for one year
+df <- df %>%
+  dplyr::group_by(code, year) %>%
+  dplyr::mutate(price_year = mean(average_price))
+df <- as.data.frame(df)
+
+
+#Yearmonth variable
+df$yearmonth <- format(as.Date(df.month$date), "%Y-%m")
+
+#density
+df$density <- df$population_size/df$area_size
+```
+
+
+###2.2 Explore the data
+The sample size for monthly variables is 7128. Variable `no_of_crimes` has some missing data.
+
+```r
+table.month <- describe(df.month)
+knitr::kable(table.month[5:7,-c(1,7,8,12,13,14)], caption = "Table 1: Description of monthly variable",  booktabs = T)%>%
+  kable_styling(latex_options = "striped")
+```
+
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<caption>Table 1: Description of monthly variable</caption>
+ <thead>
+  <tr>
+   <th style="text-align:left;">   </th>
+   <th style="text-align:right;"> n </th>
+   <th style="text-align:right;"> mean </th>
+   <th style="text-align:right;"> sd </th>
+   <th style="text-align:right;"> median </th>
+   <th style="text-align:right;"> trimmed </th>
+   <th style="text-align:right;"> max </th>
+   <th style="text-align:right;"> range </th>
+   <th style="text-align:right;"> skew </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> houses_sold </td>
+   <td style="text-align:right;"> 7128 </td>
+   <td style="text-align:right;"> 308.8 </td>
+   <td style="text-align:right;"> 144.8 </td>
+   <td style="text-align:right;"> 286 </td>
+   <td style="text-align:right;"> 299.4 </td>
+   <td style="text-align:right;"> 963 </td>
+   <td style="text-align:right;"> 961 </td>
+   <td style="text-align:right;"> 0.7295 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> no_of_crimes </td>
+   <td style="text-align:right;"> 7023 </td>
+   <td style="text-align:right;"> 2144.9 </td>
+   <td style="text-align:right;"> 892.2 </td>
+   <td style="text-align:right;"> 2121 </td>
+   <td style="text-align:right;"> 2090.5 </td>
+   <td style="text-align:right;"> 7076 </td>
+   <td style="text-align:right;"> 7076 </td>
+   <td style="text-align:right;"> 1.1706 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> borough_flag </td>
+   <td style="text-align:right;"> 7128 </td>
+   <td style="text-align:right;"> 1.0 </td>
+   <td style="text-align:right;"> 0.0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 1.0 </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 0 </td>
+   <td style="text-align:right;"> NaN </td>
+  </tr>
+</tbody>
+</table>
+
+The sample size for montly variables is 585. `life_satisfaction` variable has more than 200 missing data points while `mean_salary` variable has only a few missing data point. I will leave the `life_satisfaction` out of the data analysis as I do not expect it will affect the housing value too much. With other missing data, I will imput them in the following section.
+
+Another thing that I need to attend to is the different in scales of each variable. I will need to rescale the variables afterwards.
+
+```r
+table.year <- describe(df.year)
+knitr::kable(table.year[4:12,-c(1,7,8,12,13,14)], caption = "Table 2: Description of yearly variable",  booktabs = T)%>%
+  kable_styling(latex_options = "striped")
+```
+
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<caption>Table 2: Description of yearly variable</caption>
+ <thead>
+  <tr>
+   <th style="text-align:left;">   </th>
+   <th style="text-align:right;"> n </th>
+   <th style="text-align:right;"> mean </th>
+   <th style="text-align:right;"> sd </th>
+   <th style="text-align:right;"> median </th>
+   <th style="text-align:right;"> trimmed </th>
+   <th style="text-align:right;"> max </th>
+   <th style="text-align:right;"> range </th>
+   <th style="text-align:right;"> skew </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> median_salary </td>
+   <td style="text-align:right;"> 585 </td>
+   <td style="text-align:right;"> 30167.014 </td>
+   <td style="text-align:right;"> 6159.5498 </td>
+   <td style="text-align:right;"> 29439.000 </td>
+   <td style="text-align:right;"> 29551.305 </td>
+   <td style="text-align:right;"> 61203.00 </td>
+   <td style="text-align:right;"> 45519.00 </td>
+   <td style="text-align:right;"> 1.5053 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> life_satisfaction </td>
+   <td style="text-align:right;"> 256 </td>
+   <td style="text-align:right;"> 7.441 </td>
+   <td style="text-align:right;"> 0.1996 </td>
+   <td style="text-align:right;"> 7.455 </td>
+   <td style="text-align:right;"> 7.445 </td>
+   <td style="text-align:right;"> 7.96 </td>
+   <td style="text-align:right;"> 0.96 </td>
+   <td style="text-align:right;"> -0.0891 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> mean_salary </td>
+   <td style="text-align:right;"> 590 </td>
+   <td style="text-align:right;"> 37263.217 </td>
+   <td style="text-align:right;"> 11727.8150 </td>
+   <td style="text-align:right;"> 33796.000 </td>
+   <td style="text-align:right;"> 35166.949 </td>
+   <td style="text-align:right;"> 90842.00 </td>
+   <td style="text-align:right;"> 71322.00 </td>
+   <td style="text-align:right;"> 2.1794 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> recycling_pct </td>
+   <td style="text-align:right;"> 594 </td>
+   <td style="text-align:right;"> 27.091 </td>
+   <td style="text-align:right;"> 11.5257 </td>
+   <td style="text-align:right;"> 27.000 </td>
+   <td style="text-align:right;"> 27.055 </td>
+   <td style="text-align:right;"> 55.00 </td>
+   <td style="text-align:right;"> 55.00 </td>
+   <td style="text-align:right;"> 0.0296 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> population_size </td>
+   <td style="text-align:right;"> 594 </td>
+   <td style="text-align:right;"> 243797.766 </td>
+   <td style="text-align:right;"> 68783.1561 </td>
+   <td style="text-align:right;"> 247156.000 </td>
+   <td style="text-align:right;"> 246951.092 </td>
+   <td style="text-align:right;"> 392140.00 </td>
+   <td style="text-align:right;"> 385025.00 </td>
+   <td style="text-align:right;"> -0.9139 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> number_of_jobs </td>
+   <td style="text-align:right;"> 594 </td>
+   <td style="text-align:right;"> 154651.515 </td>
+   <td style="text-align:right;"> 122826.3342 </td>
+   <td style="text-align:right;"> 124000.000 </td>
+   <td style="text-align:right;"> 127186.975 </td>
+   <td style="text-align:right;"> 775000.00 </td>
+   <td style="text-align:right;"> 728000.00 </td>
+   <td style="text-align:right;"> 2.8874 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> area_size </td>
+   <td style="text-align:right;"> 594 </td>
+   <td style="text-align:right;"> 4832.394 </td>
+   <td style="text-align:right;"> 3229.7153 </td>
+   <td style="text-align:right;"> 3857.000 </td>
+   <td style="text-align:right;"> 4368.210 </td>
+   <td style="text-align:right;"> 15013.00 </td>
+   <td style="text-align:right;"> 14698.00 </td>
+   <td style="text-align:right;"> 1.3388 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> no_of_houses </td>
+   <td style="text-align:right;"> 594 </td>
+   <td style="text-align:right;"> 100411.616 </td>
+   <td style="text-align:right;"> 26275.0953 </td>
+   <td style="text-align:right;"> 99926.500 </td>
+   <td style="text-align:right;"> 101631.677 </td>
+   <td style="text-align:right;"> 159470.00 </td>
+   <td style="text-align:right;"> 154461.00 </td>
+   <td style="text-align:right;"> -1.0613 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> borough_flag </td>
+   <td style="text-align:right;"> 594 </td>
+   <td style="text-align:right;"> 1.000 </td>
+   <td style="text-align:right;"> 0.0000 </td>
+   <td style="text-align:right;"> 1.000 </td>
+   <td style="text-align:right;"> 1.000 </td>
+   <td style="text-align:right;"> 1.00 </td>
+   <td style="text-align:right;"> 0.00 </td>
+   <td style="text-align:right;"> NaN </td>
+  </tr>
+</tbody>
+</table>
+
+After cleaning, the yearly and monthly variable datasets only contain data from 2001-2018.
+
+```r
+# From which year to which year:
+min(df.year$year) #2001
+```
+
+```
+## [1] 2001
+```
+
+```r
+max(df.year$year) #2018
+```
+
+```
+## [1] 2018
+```
+
+```r
+min(df.month$year) #2001
+```
+
+```
+## [1] 2001
+```
+
+```r
+max(df.month$year) #2018
+```
+
+```
+## [1] 2018
+```
+
+There are 33 borough in these datasets.
+
+```r
+# How many regions
+length(unique(df.month$code)) #33
+```
+
+```
+## [1] 33
+```
+
+```r
+length(unique(df.year$code)) #33
+```
+
+```
+## [1] 33
+```
+
+The below codes show the richest, poorest, most populated and least populated regions by year.
+
+```r
+# Richest region by year by mean:
+df.year %>%
+  dplyr::group_by(year) %>%
+  dplyr::filter(mean_salary == max(mean_salary)) %>%
+  dplyr::select(area, mean_salary, year)
+```
+
+```
+## # A tibble: 14 x 3
+## # Groups:   year [14]
+##    area           mean_salary  year
+##    <fct>                <dbl> <dbl>
+##  1 city of london       56450  2002
+##  2 city of london       64272  2003
+##  3 city of london       66628  2004
+##  4 city of london       74004  2005
+##  5 city of london       86778  2007
+##  6 city of london       82973  2008
+##  7 city of london       80769  2009
+##  8 city of london       81938  2010
+##  9 city of london       90842  2011
+## 10 city of london       86987  2012
+## 11 city of london       83403  2013
+## 12 city of london       82808  2014
+## 13 city of london       77754  2015
+## 14 city of london       80655  2017
+```
+
+```r
+# Poorest region by year by mean
+df.year %>%
+  dplyr::group_by(year) %>%
+  dplyr::filter(mean_salary == min(mean_salary)) %>%
+  dplyr::select(area, mean_salary, year)
+```
+
+```
+## # A tibble: 14 x 3
+## # Groups:   year [14]
+##    area           mean_salary  year
+##    <fct>                <dbl> <dbl>
+##  1 havering             19520  2002
+##  2 havering             21167  2003
+##  3 havering             21505  2004
+##  4 waltham forest       25800  2005
+##  5 waltham forest       27129  2007
+##  6 waltham forest       28814  2008
+##  7 waltham forest       29524  2009
+##  8 brent                29353  2010
+##  9 brent                29609  2011
+## 10 sutton               29407  2012
+## 11 enfield              30011  2013
+## 12 waltham forest       28426  2014
+## 13 waltham forest       30911  2015
+## 14 waltham forest       31049  2017
+```
+
+```r
+## by median
+df.year %>%
+  dplyr::select(area, median_salary, mean_salary, year) %>%
+  dplyr::group_by(year) %>%
+  dplyr::filter(median_salary == min(median_salary, na.rm = TRUE)) 
+```
+
+```
+## # A tibble: 18 x 4
+## # Groups:   year [18]
+##    area           median_salary mean_salary  year
+##    <fct>                  <dbl>       <dbl> <dbl>
+##  1 bromley                15684       19749  2001
+##  2 havering               16123       19520  2002
+##  3 havering               18250       21167  2003
+##  4 havering               18240       21505  2004
+##  5 waltham forest         21931       25800  2005
+##  6 waltham forest         23074       27449  2006
+##  7 waltham forest         25034       27129  2007
+##  8 enfield                25550       28930  2008
+##  9 sutton                 26111       29775  2009
+## 10 brent                  25997       29353  2010
+## 11 enfield                26412       31797  2011
+## 12 sutton                 25247       29407  2012
+## 13 harrow                 25784       31504  2013
+## 14 sutton                 25797       30752  2014
+## 15 enfield                26230       31041  2015
+## 16 waltham forest         27455       30172  2016
+## 17 sutton                 27945       35113  2017
+## 18 sutton                 28853       32442  2018
+```
+
+```r
+# Most populated regions by year
+df.year %>%
+  dplyr::group_by(year) %>%
+  dplyr::filter(population_size == max(population_size)) %>%
+  dplyr::select(area, population_size , year)
+```
+
+```
+## # A tibble: 18 x 3
+## # Groups:   year [18]
+##    area    population_size  year
+##    <fct>             <int> <dbl>
+##  1 croydon          335112  2001
+##  2 croydon          335415  2002
+##  3 croydon          335919  2003
+##  4 croydon          337134  2004
+##  5 croydon          339052  2005
+##  6 croydon          340449  2006
+##  7 croydon          344029  2007
+##  8 croydon          349308  2008
+##  9 croydon          352763  2009
+## 10 croydon          357951  2010
+## 11 croydon          364815  2011
+## 12 croydon          368886  2012
+## 13 croydon          372752  2013
+## 14 croydon          376040  2014
+## 15 barnet           379691  2015
+## 16 barnet           386083  2016
+## 17 barnet           387803  2017
+## 18 barnet           392140  2018
+```
+
+```r
+# Least populated regions by year
+df.year %>%
+  dplyr::group_by(year) %>%
+  dplyr::filter(population_size == min(population_size)) %>%
+  dplyr::select(area, population_size , year)
+```
+
+```
+## # A tibble: 18 x 3
+## # Groups:   year [18]
+##    area           population_size  year
+##    <fct>                    <int> <dbl>
+##  1 city of london            7359  2001
+##  2 city of london            7280  2002
+##  3 city of london            7115  2003
+##  4 city of london            7118  2004
+##  5 city of london            7131  2005
+##  6 city of london            7254  2006
+##  7 city of london            7607  2007
+##  8 city of london            7429  2008
+##  9 city of london            7472  2009
+## 10 city of london            7338  2010
+## 11 city of london            7412  2011
+## 12 city of london            7604  2012
+## 13 city of london            7648  2013
+## 14 city of london            8072  2014
+## 15 city of london            8760  2015
+## 16 city of london            9401  2016
+## 17 city of london            7654  2017
+## 18 city of london            8706  2018
+```
+
+```r
+# Largest recylcle percentage by year
+df.year %>%
+  dplyr::group_by(year) %>%
+  dplyr::filter(recycling_pct == max(recycling_pct)) %>%
+  dplyr::select(area, recycling_pct , year)
+```
+
+```
+## # A tibble: 19 x 3
+## # Groups:   year [18]
+##    area       recycling_pct  year
+##    <fct>              <dbl> <dbl>
+##  1 bexley                20  2001
+##  2 hillingdon            20  2001
+##  3 hillingdon            28  2002
+##  4 hillingdon            34  2003
+##  5 bexley                30  2004
+##  6 bexley                38  2005
+##  7 bexley                40  2006
+##  8 bexley                42  2007
+##  9 bexley                51  2008
+## 10 bexley                51  2009
+## 11 bexley                51  2010
+## 12 bexley                54  2011
+## 13 bexley                54  2012
+## 14 bexley                55  2013
+## 15 bexley                54  2014
+## 16 bexley                52  2015
+## 17 bexley                53  2016
+## 18 bexley                52  2017
+## 19 bexley                54  2018
+```
+
+
+###2.3 Transforming data
+To transform the dataset, I would use a ligher version of the merged dataset. This will give me faster computation time and less confusion during data wrangling. Moreover, it is easier for me to "reset" the data if I want to go back to this point of data wrangling.
+
+##### Creating lighter version of the dataset
+
+```r
+df1 <- dplyr::select(df, average_price,houses_sold, no_of_crimes, mean_salary, recycling_pct,
+              population_size, number_of_jobs, area_size, no_of_houses, density, lag1month,
+              code, year, date, yearmonth, price_year)
+describe(df1)
+```
+
+```
+##                 vars    n      mean        sd    median   trimmed
+## average_price      1 7128 344979.76 187754.03 291526.50 314233.20
+## houses_sold        2 7128    308.81    144.76    286.00    299.35
+## no_of_crimes       3 7023   2144.94    892.16   2121.00   2090.54
+## mean_salary        4 7080  37263.22  11718.70  33796.00  35166.95
+## recycling_pct      5 7128     27.09     11.52     27.00     27.05
+## population_size    6 7128 243797.77  68730.05 247156.00 246949.03
+## number_of_jobs     7 7128 154651.52 122731.51 124000.00 127113.60
+## area_size          8 7128   4832.39   3227.22   3857.00   4367.05
+## no_of_houses       9 7128 100411.62  26254.81  99926.50 101626.31
+## density           10 7128     66.27     34.37     54.49     63.58
+## lag1month         11 7128 343297.36 187222.95 290130.50 312724.97
+## code*             12 7128     17.00      9.52     17.00     17.00
+## year              13 7128   2009.50      5.19   2009.50   2009.50
+## date*             14 7128    180.50     62.36    180.50    180.50
+## yearmonth*        15 7128       NaN        NA        NA       NaN
+## price_year        16 7128 344979.76 187137.28 293638.00 314273.92
+##                       mad      min       max     range  skew kurtosis
+## average_price   119980.89 82343.00 1463378.0 1381035.0  2.21     6.81
+## houses_sold        131.21     2.00     963.0     961.0  0.73     0.93
+## no_of_crimes       704.24     0.00    7076.0    7076.0  1.17     4.07
+## mean_salary       5894.82 19520.00   90842.0   71322.0  2.18     5.50
+## recycling_pct       11.86     0.00      55.0      55.0  0.03    -0.43
+## population_size  65120.24  7115.00  392140.0  385025.0 -0.92     2.25
+## number_of_jobs   59304.00 47000.00  775000.0  728000.0  2.89     9.15
+## area_size         2515.97   315.00   15013.0   14698.0  1.34     1.57
+## no_of_houses     22832.04  5009.00  159470.0  154461.0 -1.06     3.17
+## density             32.69    19.63     160.9     141.3  0.61    -0.67
+## lag1month       119251.45 81726.00 1463378.0 1381652.0  2.21     6.85
+## code*               11.86     1.00      33.0      32.0  0.00    -1.20
+## year                 6.67  2001.00    2018.0      17.0  0.00    -1.21
+## date*               80.06    73.00     288.0     215.0  0.00    -1.20
+## yearmonth*             NA      Inf      -Inf      -Inf    NA       NA
+## price_year      120866.74 88664.00 1363880.1 1275216.1  2.20     6.75
+##                      se
+## average_price   2223.85
+## houses_sold        1.71
+## no_of_crimes      10.65
+## mean_salary      139.27
+## recycling_pct      0.14
+## population_size  814.07
+## number_of_jobs  1453.69
+## area_size         38.22
+## no_of_houses     310.97
+## density            0.41
+## lag1month       2217.56
+## code*              0.11
+## year               0.06
+## date*              0.74
+## yearmonth*           NA
+## price_year      2216.54
+```
+
+Summary of the new dataset:
+
+```r
+table.df<- describe(df)
+knitr::kable(table.df[-c(1:3,7),-c(1,7,8,12,13,14)], caption = "Table 3: Description of all variable",  booktabs = T)%>%
+  kable_styling(latex_options = "striped")
+```
+
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<caption>Table 3: Description of all variable</caption>
+ <thead>
+  <tr>
+   <th style="text-align:left;">   </th>
+   <th style="text-align:right;"> n </th>
+   <th style="text-align:right;"> mean </th>
+   <th style="text-align:right;"> sd </th>
+   <th style="text-align:right;"> median </th>
+   <th style="text-align:right;"> trimmed </th>
+   <th style="text-align:right;"> max </th>
+   <th style="text-align:right;"> range </th>
+   <th style="text-align:right;"> skew </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> average_price </td>
+   <td style="text-align:right;"> 7128 </td>
+   <td style="text-align:right;"> 344979.76 </td>
+   <td style="text-align:right;"> 187754.03 </td>
+   <td style="text-align:right;"> 291526.50 </td>
+   <td style="text-align:right;"> 314233.20 </td>
+   <td style="text-align:right;"> 1463378.0 </td>
+   <td style="text-align:right;"> 1381035.0 </td>
+   <td style="text-align:right;"> 2.2089 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> houses_sold </td>
+   <td style="text-align:right;"> 7128 </td>
+   <td style="text-align:right;"> 308.81 </td>
+   <td style="text-align:right;"> 144.76 </td>
+   <td style="text-align:right;"> 286.00 </td>
+   <td style="text-align:right;"> 299.35 </td>
+   <td style="text-align:right;"> 963.0 </td>
+   <td style="text-align:right;"> 961.0 </td>
+   <td style="text-align:right;"> 0.7295 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> no_of_crimes </td>
+   <td style="text-align:right;"> 7023 </td>
+   <td style="text-align:right;"> 2144.94 </td>
+   <td style="text-align:right;"> 892.16 </td>
+   <td style="text-align:right;"> 2121.00 </td>
+   <td style="text-align:right;"> 2090.54 </td>
+   <td style="text-align:right;"> 7076.0 </td>
+   <td style="text-align:right;"> 7076.0 </td>
+   <td style="text-align:right;"> 1.1706 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> lag1month </td>
+   <td style="text-align:right;"> 7128 </td>
+   <td style="text-align:right;"> 343297.36 </td>
+   <td style="text-align:right;"> 187222.95 </td>
+   <td style="text-align:right;"> 290130.50 </td>
+   <td style="text-align:right;"> 312724.97 </td>
+   <td style="text-align:right;"> 1463378.0 </td>
+   <td style="text-align:right;"> 1381652.0 </td>
+   <td style="text-align:right;"> 2.2140 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> median_salary </td>
+   <td style="text-align:right;"> 7020 </td>
+   <td style="text-align:right;"> 30167.01 </td>
+   <td style="text-align:right;"> 6154.72 </td>
+   <td style="text-align:right;"> 29439.00 </td>
+   <td style="text-align:right;"> 29549.86 </td>
+   <td style="text-align:right;"> 61203.0 </td>
+   <td style="text-align:right;"> 45519.0 </td>
+   <td style="text-align:right;"> 1.5089 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> mean_salary </td>
+   <td style="text-align:right;"> 7080 </td>
+   <td style="text-align:right;"> 37263.22 </td>
+   <td style="text-align:right;"> 11718.70 </td>
+   <td style="text-align:right;"> 33796.00 </td>
+   <td style="text-align:right;"> 35166.95 </td>
+   <td style="text-align:right;"> 90842.0 </td>
+   <td style="text-align:right;"> 71322.0 </td>
+   <td style="text-align:right;"> 2.1845 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> recycling_pct </td>
+   <td style="text-align:right;"> 7128 </td>
+   <td style="text-align:right;"> 27.09 </td>
+   <td style="text-align:right;"> 11.52 </td>
+   <td style="text-align:right;"> 27.00 </td>
+   <td style="text-align:right;"> 27.05 </td>
+   <td style="text-align:right;"> 55.0 </td>
+   <td style="text-align:right;"> 55.0 </td>
+   <td style="text-align:right;"> 0.0297 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> population_size </td>
+   <td style="text-align:right;"> 7128 </td>
+   <td style="text-align:right;"> 243797.77 </td>
+   <td style="text-align:right;"> 68730.05 </td>
+   <td style="text-align:right;"> 247156.00 </td>
+   <td style="text-align:right;"> 246949.03 </td>
+   <td style="text-align:right;"> 392140.0 </td>
+   <td style="text-align:right;"> 385025.0 </td>
+   <td style="text-align:right;"> -0.9160 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> number_of_jobs </td>
+   <td style="text-align:right;"> 7128 </td>
+   <td style="text-align:right;"> 154651.52 </td>
+   <td style="text-align:right;"> 122731.51 </td>
+   <td style="text-align:right;"> 124000.00 </td>
+   <td style="text-align:right;"> 127113.60 </td>
+   <td style="text-align:right;"> 775000.0 </td>
+   <td style="text-align:right;"> 728000.0 </td>
+   <td style="text-align:right;"> 2.8941 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> area_size </td>
+   <td style="text-align:right;"> 7128 </td>
+   <td style="text-align:right;"> 4832.39 </td>
+   <td style="text-align:right;"> 3227.22 </td>
+   <td style="text-align:right;"> 3857.00 </td>
+   <td style="text-align:right;"> 4367.05 </td>
+   <td style="text-align:right;"> 15013.0 </td>
+   <td style="text-align:right;"> 14698.0 </td>
+   <td style="text-align:right;"> 1.3419 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> no_of_houses </td>
+   <td style="text-align:right;"> 7128 </td>
+   <td style="text-align:right;"> 100411.62 </td>
+   <td style="text-align:right;"> 26254.81 </td>
+   <td style="text-align:right;"> 99926.50 </td>
+   <td style="text-align:right;"> 101626.31 </td>
+   <td style="text-align:right;"> 159470.0 </td>
+   <td style="text-align:right;"> 154461.0 </td>
+   <td style="text-align:right;"> -1.0637 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> price_year </td>
+   <td style="text-align:right;"> 7128 </td>
+   <td style="text-align:right;"> 344979.76 </td>
+   <td style="text-align:right;"> 187137.28 </td>
+   <td style="text-align:right;"> 293638.00 </td>
+   <td style="text-align:right;"> 314273.92 </td>
+   <td style="text-align:right;"> 1363880.1 </td>
+   <td style="text-align:right;"> 1275216.1 </td>
+   <td style="text-align:right;"> 2.2040 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> density </td>
+   <td style="text-align:right;"> 7128 </td>
+   <td style="text-align:right;"> 66.27 </td>
+   <td style="text-align:right;"> 34.37 </td>
+   <td style="text-align:right;"> 54.49 </td>
+   <td style="text-align:right;"> 63.58 </td>
+   <td style="text-align:right;"> 160.9 </td>
+   <td style="text-align:right;"> 141.3 </td>
+   <td style="text-align:right;"> 0.6114 </td>
+  </tr>
+</tbody>
+</table>
+
+
+##### Imputing using CART algorithm
+
+```r
+mice_imputes <-  mice(df1, m=5, method = "cart", maxit = 5)
+```
+
+```
+## 
+##  iter imp variable
+##   1   1  no_of_crimes  mean_salary
+##   1   2  no_of_crimes  mean_salary
+##   1   3  no_of_crimes  mean_salary
+##   1   4  no_of_crimes  mean_salary
+##   1   5  no_of_crimes  mean_salary
+##   2   1  no_of_crimes  mean_salary
+##   2   2  no_of_crimes  mean_salary
+##   2   3  no_of_crimes  mean_salary
+##   2   4  no_of_crimes  mean_salary
+##   2   5  no_of_crimes  mean_salary
+##   3   1  no_of_crimes  mean_salary
+##   3   2  no_of_crimes  mean_salary
+##   3   3  no_of_crimes  mean_salary
+##   3   4  no_of_crimes  mean_salary
+##   3   5  no_of_crimes  mean_salary
+##   4   1  no_of_crimes  mean_salary
+##   4   2  no_of_crimes  mean_salary
+##   4   3  no_of_crimes  mean_salary
+##   4   4  no_of_crimes  mean_salary
+##   4   5  no_of_crimes  mean_salary
+##   5   1  no_of_crimes  mean_salary
+##   5   2  no_of_crimes  mean_salary
+##   5   3  no_of_crimes  mean_salary
+##   5   4  no_of_crimes  mean_salary
+##   5   5  no_of_crimes  mean_salary
+```
+
+```r
+df1 = complete(mice_imputes,5)
+```
+
+##### Rescaling
+`mean_salary`, `average_price` and `lag1month`'s scales are very different from the rest (rates, population, etc.). Thu, I will use the conventional log transformation to rescale them. All N/A will be replaced with 0.
+
+```r
+df1$ln_mean_salary <- log(df1$mean_salary) 
+df1$ln_average_price <- log(df1$average_price)
+df1$ln_lag1month <- log(df1$lag1month)
+
+#Criminal rate
+df1$crime_rate <- 1000*df1$no_of_crimes/(df1$population_size)
+df1[is.na(df1)] <- 0
+```
+
+###2.4 Visualizing the data
+
+#### Prices over year by city
+House price over year, each line is one area. The price generally grows, at different rates, suggesting that each area will be different from each other.
+The highest line is from "kensington and chelsea". 
+
+```r
+ggplot(df1, aes( x = year, y = price_year, group = code)) +
+  geom_smooth(se = F, color = "violetred")+
+  theme_minimal()+
+  theme(axis.text.x = element_text(size = 8, angle = 45))+
+  ggtitle("Price over years by each area")
+```
+
+![](Project_files/figure-html/prive-over-year-1.png)<!-- -->
+
+#### Price vs. crime_rate by city
+
+The graphs below shows two different way to describe house price and crime rate in London. The first one does not separate each area and visibly confusing to interpret.
+
+```r
+ggplot(df1, aes( x = year, y = crime_rate, group = code)) +
+  geom_smooth(se = F, color = "violetred")+
+   theme(axis.text.x = element_text(size = 8, angle = 90))+
+  theme_minimal()+
+  ggtitle("Price vs. Crime rates over time by each area")
+```
+
+![](Project_files/figure-html/price-over-year-1.png)<!-- -->
+
+Price vs. crime rates by each city
+
+```r
+city <- unique(df1$code)
+
+priceCrime_p <- function(df, na.rm = T){for (i in seq_along(city)){
+  plot <- ggplot(subset(df1, code == city[i]), aes( x = crime_rate, y = average_price))+
+    geom_point(color = "lightpink1")+
+    geom_smooth(se = F, color = "lightsteelblue3")+
+    theme_minimal()
+  print(plot)
+}
+}
+
+priceCrime_p(df1)
+```
+
+![](Project_files/figure-html/price_vs_crime-1.png)<!-- -->![](Project_files/figure-html/price_vs_crime-2.png)<!-- -->![](Project_files/figure-html/price_vs_crime-3.png)<!-- -->![](Project_files/figure-html/price_vs_crime-4.png)<!-- -->![](Project_files/figure-html/price_vs_crime-5.png)<!-- -->![](Project_files/figure-html/price_vs_crime-6.png)<!-- -->![](Project_files/figure-html/price_vs_crime-7.png)<!-- -->![](Project_files/figure-html/price_vs_crime-8.png)<!-- -->![](Project_files/figure-html/price_vs_crime-9.png)<!-- -->![](Project_files/figure-html/price_vs_crime-10.png)<!-- -->![](Project_files/figure-html/price_vs_crime-11.png)<!-- -->![](Project_files/figure-html/price_vs_crime-12.png)<!-- -->![](Project_files/figure-html/price_vs_crime-13.png)<!-- -->![](Project_files/figure-html/price_vs_crime-14.png)<!-- -->![](Project_files/figure-html/price_vs_crime-15.png)<!-- -->![](Project_files/figure-html/price_vs_crime-16.png)<!-- -->![](Project_files/figure-html/price_vs_crime-17.png)<!-- -->![](Project_files/figure-html/price_vs_crime-18.png)<!-- -->![](Project_files/figure-html/price_vs_crime-19.png)<!-- -->![](Project_files/figure-html/price_vs_crime-20.png)<!-- -->![](Project_files/figure-html/price_vs_crime-21.png)<!-- -->![](Project_files/figure-html/price_vs_crime-22.png)<!-- -->![](Project_files/figure-html/price_vs_crime-23.png)<!-- -->![](Project_files/figure-html/price_vs_crime-24.png)<!-- -->![](Project_files/figure-html/price_vs_crime-25.png)<!-- -->![](Project_files/figure-html/price_vs_crime-26.png)<!-- -->![](Project_files/figure-html/price_vs_crime-27.png)<!-- -->![](Project_files/figure-html/price_vs_crime-28.png)<!-- -->![](Project_files/figure-html/price_vs_crime-29.png)<!-- -->![](Project_files/figure-html/price_vs_crime-30.png)<!-- -->![](Project_files/figure-html/price_vs_crime-31.png)<!-- -->![](Project_files/figure-html/price_vs_crime-32.png)<!-- -->![](Project_files/figure-html/price_vs_crime-33.png)<!-- -->
+
+
+```r
+ggplot(df1, aes( x = crime_rate, y = average_price))+
+  geom_point(color = "lightpink1")+
+  geom_smooth(color = "violetred")+
+  theme_minimal()+
+  ggtitle("Price vs crime rate in London")
+```
+
+![](Project_files/figure-html/unnamed-chunk-13-1.png)<!-- -->
+
+#### Price vs. Density
+Density over years by each city
+
+```r
+ggplot(df1, aes( x = year, y = density, group = code)) +
+  geom_smooth(se = F, color = "violetred")+
+  theme_minimal()+
+  theme(axis.text.x = element_text(size = 8, angle = 45))+
+  ggtitle("Price vs density rate by area")
+```
+
+![](Project_files/figure-html/population-over-year-1.png)<!-- -->
+
+Density vs. price by each city
+
+```r
+densityPrice <- function(df, na.rm = T){
+  for (i in seq_along(city)){
+  plot <- ggplot(subset(df1, code == city[i]), aes( x = density, y = average_price, color = code))+
+    geom_point(color = "lightpink1")+
+    geom_smooth(se = F, color = "lightsteelblue3")+
+    theme_minimal()
+  print(plot)
+  }
+}
+densityPrice(df1)
+```
+
+![](Project_files/figure-html/price_vs_population-1.png)<!-- -->![](Project_files/figure-html/price_vs_population-2.png)<!-- -->![](Project_files/figure-html/price_vs_population-3.png)<!-- -->![](Project_files/figure-html/price_vs_population-4.png)<!-- -->![](Project_files/figure-html/price_vs_population-5.png)<!-- -->![](Project_files/figure-html/price_vs_population-6.png)<!-- -->![](Project_files/figure-html/price_vs_population-7.png)<!-- -->![](Project_files/figure-html/price_vs_population-8.png)<!-- -->![](Project_files/figure-html/price_vs_population-9.png)<!-- -->![](Project_files/figure-html/price_vs_population-10.png)<!-- -->![](Project_files/figure-html/price_vs_population-11.png)<!-- -->![](Project_files/figure-html/price_vs_population-12.png)<!-- -->![](Project_files/figure-html/price_vs_population-13.png)<!-- -->![](Project_files/figure-html/price_vs_population-14.png)<!-- -->![](Project_files/figure-html/price_vs_population-15.png)<!-- -->![](Project_files/figure-html/price_vs_population-16.png)<!-- -->![](Project_files/figure-html/price_vs_population-17.png)<!-- -->![](Project_files/figure-html/price_vs_population-18.png)<!-- -->![](Project_files/figure-html/price_vs_population-19.png)<!-- -->![](Project_files/figure-html/price_vs_population-20.png)<!-- -->![](Project_files/figure-html/price_vs_population-21.png)<!-- -->![](Project_files/figure-html/price_vs_population-22.png)<!-- -->![](Project_files/figure-html/price_vs_population-23.png)<!-- -->![](Project_files/figure-html/price_vs_population-24.png)<!-- -->![](Project_files/figure-html/price_vs_population-25.png)<!-- -->![](Project_files/figure-html/price_vs_population-26.png)<!-- -->![](Project_files/figure-html/price_vs_population-27.png)<!-- -->![](Project_files/figure-html/price_vs_population-28.png)<!-- -->![](Project_files/figure-html/price_vs_population-29.png)<!-- -->![](Project_files/figure-html/price_vs_population-30.png)<!-- -->![](Project_files/figure-html/price_vs_population-31.png)<!-- -->![](Project_files/figure-html/price_vs_population-32.png)<!-- -->![](Project_files/figure-html/price_vs_population-33.png)<!-- -->
+
+Not by city
+
+```r
+ggplot(df1, aes( x = density, y = average_price))+
+    geom_point(color= "lightpink1")+
+    geom_smooth(color = "violetred1")+
+    theme_minimal()
+```
+
+![](Project_files/figure-html/unnamed-chunk-14-1.png)<!-- -->
+
+We can see that the relationship between density and house price is similar across areas. Thus, we  do not need density at monthly-level.
+
+
+#### Price vs number of jobs
+
+
+```r
+ggplot(df1, aes( x = year, y = number_of_jobs, group = code)) +
+  geom_smooth(se = F, color = "violetred")+
+  theme_minimal()+
+  theme(axis.text.x = element_text(size = 8, angle = 45))+
+  ggtitle("Price vs number of jobs by area over the years")
+```
+
+![](Project_files/figure-html/jobs-over-year-1.png)<!-- -->
+
+Jobs vs. price by city
+
+```r
+jobPrice <- function(df, na.rm = T){
+  for (i in seq_along(city)){
+  plot <- ggplot(subset(df1, code == city[i]), aes( x = number_of_jobs, y = average_price, color = code))+
+    geom_point(color = "lightpink1")+
+    geom_smooth(se = F, color = "lightsteelblue3")+
+    theme_minimal()
+  print(plot)
+  }
+}
+jobPrice(df1)
+```
+
+![](Project_files/figure-html/unnamed-chunk-15-1.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-2.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-3.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-4.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-5.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-6.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-7.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-8.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-9.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-10.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-11.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-12.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-13.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-14.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-15.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-16.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-17.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-18.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-19.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-20.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-21.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-22.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-23.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-24.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-25.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-26.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-27.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-28.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-29.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-30.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-31.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-32.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-15-33.png)<!-- -->
+
+Job vs price not by city
+
+```r
+ggplot(df1, aes( x = number_of_jobs, y = average_price))+
+    geom_point(color= "lightpink1")+
+    geom_smooth(color = "violetred1")+
+    theme_minimal()
+```
+
+![](Project_files/figure-html/unnamed-chunk-16-1.png)<!-- -->
+
+
+We can see that the relationship between number of jobs and house price is similar across areas. Thus, we do not need a random slope model for number of jobs.
+
+#### Salary vs price
+
+```r
+ggplot(df1, aes( x = year, y = ln_mean_salary, group = code, color = code)) +
+  geom_smooth(se = F)+
+  theme_minimal()+
+  theme(axis.text.x = element_text(size = 8, angle = 45))+
+  ggtitle("Price vs log of salary of resident by area")
+```
+
+![](Project_files/figure-html/unnamed-chunk-17-1.png)<!-- -->
+
+The above graph also suggests that `ln(mean_salary)` increased, then peaked at 2010 and declined afterwards. It is useful to run a model with the square of `ln(mean_salary)`.
+
+
+```r
+ggplot(df1, aes( x = ln_mean_salary, y = average_price))+
+    geom_point(color= "lightpink1")+
+    geom_smooth(color = "violetred1")+
+    theme_minimal()+
+  ggtitle("Price vs  log of salary of resident")
+```
+
+![](Project_files/figure-html/unnamed-chunk-18-1.png)<!-- -->
+
+Salary appears to do well as a second-level variable as the general graph explains quite well on itself. The individual graphs for each area below show similar trends across areas. 
+
+
+
+```r
+salaryPrice <- function(df, na.rm = T){
+  for (i in seq_along(city)){
+  plot <- ggplot(subset(df1, code == city[i]), aes( x = ln_mean_salary, y = average_price, color = code))+
+    geom_point(color = "lightpink1")+
+    geom_smooth(se = F, color = "lightsteelblue3")+
+    theme_minimal()
+  print(plot)
+  }
+}
+salaryPrice(df1)
+```
+
+![](Project_files/figure-html/unnamed-chunk-19-1.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-2.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-3.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-4.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-5.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-6.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-7.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-8.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-9.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-10.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-11.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-12.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-13.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-14.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-15.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-16.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-17.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-18.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-19.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-20.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-21.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-22.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-23.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-24.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-25.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-26.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-27.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-28.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-29.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-30.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-31.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-32.png)<!-- -->![](Project_files/figure-html/unnamed-chunk-19-33.png)<!-- -->
+
+
+
+##2.5 Correlation matrix
+I will also investigate the variables' correlation, which is shown in the table below. Yearly density shows a good correlation with average price by month. Beside density, number of crimes, yearly mean salary, recycling percentage are also highly correlated with the average monthly price.
+
+```r
+cor.df1.table <- as.data.frame(cor(na.omit(dplyr::select(df1, average_price,houses_sold, no_of_crimes, mean_salary, recycling_pct,
+                   population_size, number_of_jobs, area_size, no_of_houses, density,
+                   price_year, lag1month))))
+
+knitr::kable(cor.df1.table, caption = "Table 4: Correlation among variables",  booktabs = T)%>%
+  kable_styling(latex_options = "striped")
+```
+
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<caption>Table 4: Correlation among variables</caption>
+ <thead>
+  <tr>
+   <th style="text-align:left;">   </th>
+   <th style="text-align:right;"> average_price </th>
+   <th style="text-align:right;"> houses_sold </th>
+   <th style="text-align:right;"> no_of_crimes </th>
+   <th style="text-align:right;"> mean_salary </th>
+   <th style="text-align:right;"> recycling_pct </th>
+   <th style="text-align:right;"> population_size </th>
+   <th style="text-align:right;"> number_of_jobs </th>
+   <th style="text-align:right;"> area_size </th>
+   <th style="text-align:right;"> no_of_houses </th>
+   <th style="text-align:right;"> density </th>
+   <th style="text-align:right;"> price_year </th>
+   <th style="text-align:right;"> lag1month </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> average_price </td>
+   <td style="text-align:right;"> 1.0000 </td>
+   <td style="text-align:right;"> -0.3164 </td>
+   <td style="text-align:right;"> 0.0197 </td>
+   <td style="text-align:right;"> 0.4219 </td>
+   <td style="text-align:right;"> 0.2250 </td>
+   <td style="text-align:right;"> -0.1795 </td>
+   <td style="text-align:right;"> 0.4901 </td>
+   <td style="text-align:right;"> -0.3313 </td>
+   <td style="text-align:right;"> -0.0593 </td>
+   <td style="text-align:right;"> 0.4422 </td>
+   <td style="text-align:right;"> 0.9967 </td>
+   <td style="text-align:right;"> 0.9988 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> houses_sold </td>
+   <td style="text-align:right;"> -0.3164 </td>
+   <td style="text-align:right;"> 1.0000 </td>
+   <td style="text-align:right;"> 0.3219 </td>
+   <td style="text-align:right;"> -0.3757 </td>
+   <td style="text-align:right;"> -0.3045 </td>
+   <td style="text-align:right;"> 0.4032 </td>
+   <td style="text-align:right;"> -0.1384 </td>
+   <td style="text-align:right;"> 0.3589 </td>
+   <td style="text-align:right;"> 0.4788 </td>
+   <td style="text-align:right;"> -0.1208 </td>
+   <td style="text-align:right;"> -0.3258 </td>
+   <td style="text-align:right;"> -0.3216 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> no_of_crimes </td>
+   <td style="text-align:right;"> 0.0197 </td>
+   <td style="text-align:right;"> 0.3219 </td>
+   <td style="text-align:right;"> 1.0000 </td>
+   <td style="text-align:right;"> -0.0197 </td>
+   <td style="text-align:right;"> -0.4057 </td>
+   <td style="text-align:right;"> 0.4402 </td>
+   <td style="text-align:right;"> 0.4333 </td>
+   <td style="text-align:right;"> -0.1047 </td>
+   <td style="text-align:right;"> 0.5652 </td>
+   <td style="text-align:right;"> 0.4867 </td>
+   <td style="text-align:right;"> 0.0193 </td>
+   <td style="text-align:right;"> 0.0196 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> mean_salary </td>
+   <td style="text-align:right;"> 0.4219 </td>
+   <td style="text-align:right;"> -0.3757 </td>
+   <td style="text-align:right;"> -0.0197 </td>
+   <td style="text-align:right;"> 1.0000 </td>
+   <td style="text-align:right;"> 0.0654 </td>
+   <td style="text-align:right;"> -0.4016 </td>
+   <td style="text-align:right;"> 0.6822 </td>
+   <td style="text-align:right;"> -0.4301 </td>
+   <td style="text-align:right;"> -0.3569 </td>
+   <td style="text-align:right;"> 0.3203 </td>
+   <td style="text-align:right;"> 0.4233 </td>
+   <td style="text-align:right;"> 0.4220 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> recycling_pct </td>
+   <td style="text-align:right;"> 0.2250 </td>
+   <td style="text-align:right;"> -0.3045 </td>
+   <td style="text-align:right;"> -0.4057 </td>
+   <td style="text-align:right;"> 0.0654 </td>
+   <td style="text-align:right;"> 1.0000 </td>
+   <td style="text-align:right;"> 0.1352 </td>
+   <td style="text-align:right;"> -0.0771 </td>
+   <td style="text-align:right;"> 0.3148 </td>
+   <td style="text-align:right;"> 0.0666 </td>
+   <td style="text-align:right;"> -0.2893 </td>
+   <td style="text-align:right;"> 0.2257 </td>
+   <td style="text-align:right;"> 0.2260 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> population_size </td>
+   <td style="text-align:right;"> -0.1795 </td>
+   <td style="text-align:right;"> 0.4032 </td>
+   <td style="text-align:right;"> 0.4402 </td>
+   <td style="text-align:right;"> -0.4016 </td>
+   <td style="text-align:right;"> 0.1352 </td>
+   <td style="text-align:right;"> 1.0000 </td>
+   <td style="text-align:right;"> -0.2064 </td>
+   <td style="text-align:right;"> 0.4819 </td>
+   <td style="text-align:right;"> 0.9452 </td>
+   <td style="text-align:right;"> 0.0227 </td>
+   <td style="text-align:right;"> -0.1801 </td>
+   <td style="text-align:right;"> -0.1788 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> number_of_jobs </td>
+   <td style="text-align:right;"> 0.4901 </td>
+   <td style="text-align:right;"> -0.1384 </td>
+   <td style="text-align:right;"> 0.4333 </td>
+   <td style="text-align:right;"> 0.6822 </td>
+   <td style="text-align:right;"> -0.0771 </td>
+   <td style="text-align:right;"> -0.2064 </td>
+   <td style="text-align:right;"> 1.0000 </td>
+   <td style="text-align:right;"> -0.2732 </td>
+   <td style="text-align:right;"> -0.0781 </td>
+   <td style="text-align:right;"> 0.2735 </td>
+   <td style="text-align:right;"> 0.4917 </td>
+   <td style="text-align:right;"> 0.4895 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> area_size </td>
+   <td style="text-align:right;"> -0.3313 </td>
+   <td style="text-align:right;"> 0.3589 </td>
+   <td style="text-align:right;"> -0.1047 </td>
+   <td style="text-align:right;"> -0.4301 </td>
+   <td style="text-align:right;"> 0.3148 </td>
+   <td style="text-align:right;"> 0.4819 </td>
+   <td style="text-align:right;"> -0.2732 </td>
+   <td style="text-align:right;"> 1.0000 </td>
+   <td style="text-align:right;"> 0.4256 </td>
+   <td style="text-align:right;"> -0.6892 </td>
+   <td style="text-align:right;"> -0.3324 </td>
+   <td style="text-align:right;"> -0.3305 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> no_of_houses </td>
+   <td style="text-align:right;"> -0.0593 </td>
+   <td style="text-align:right;"> 0.4788 </td>
+   <td style="text-align:right;"> 0.5652 </td>
+   <td style="text-align:right;"> -0.3569 </td>
+   <td style="text-align:right;"> 0.0666 </td>
+   <td style="text-align:right;"> 0.9452 </td>
+   <td style="text-align:right;"> -0.0781 </td>
+   <td style="text-align:right;"> 0.4256 </td>
+   <td style="text-align:right;"> 1.0000 </td>
+   <td style="text-align:right;"> 0.1549 </td>
+   <td style="text-align:right;"> -0.0595 </td>
+   <td style="text-align:right;"> -0.0589 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> density </td>
+   <td style="text-align:right;"> 0.4422 </td>
+   <td style="text-align:right;"> -0.1208 </td>
+   <td style="text-align:right;"> 0.4867 </td>
+   <td style="text-align:right;"> 0.3203 </td>
+   <td style="text-align:right;"> -0.2893 </td>
+   <td style="text-align:right;"> 0.0227 </td>
+   <td style="text-align:right;"> 0.2735 </td>
+   <td style="text-align:right;"> -0.6892 </td>
+   <td style="text-align:right;"> 0.1549 </td>
+   <td style="text-align:right;"> 1.0000 </td>
+   <td style="text-align:right;"> 0.4437 </td>
+   <td style="text-align:right;"> 0.4414 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> price_year </td>
+   <td style="text-align:right;"> 0.9967 </td>
+   <td style="text-align:right;"> -0.3258 </td>
+   <td style="text-align:right;"> 0.0193 </td>
+   <td style="text-align:right;"> 0.4233 </td>
+   <td style="text-align:right;"> 0.2257 </td>
+   <td style="text-align:right;"> -0.1801 </td>
+   <td style="text-align:right;"> 0.4917 </td>
+   <td style="text-align:right;"> -0.3324 </td>
+   <td style="text-align:right;"> -0.0595 </td>
+   <td style="text-align:right;"> 0.4437 </td>
+   <td style="text-align:right;"> 1.0000 </td>
+   <td style="text-align:right;"> 0.9965 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> lag1month </td>
+   <td style="text-align:right;"> 0.9988 </td>
+   <td style="text-align:right;"> -0.3216 </td>
+   <td style="text-align:right;"> 0.0196 </td>
+   <td style="text-align:right;"> 0.4220 </td>
+   <td style="text-align:right;"> 0.2260 </td>
+   <td style="text-align:right;"> -0.1788 </td>
+   <td style="text-align:right;"> 0.4895 </td>
+   <td style="text-align:right;"> -0.3305 </td>
+   <td style="text-align:right;"> -0.0589 </td>
+   <td style="text-align:right;"> 0.4414 </td>
+   <td style="text-align:right;"> 0.9965 </td>
+   <td style="text-align:right;"> 1.0000 </td>
+  </tr>
+</tbody>
+</table>
+
+
+##3. Model building
+With the preliminary understanding how the predictors relate with the house price, I apply 5 models below and use Information Criterion to choose among them.
+
+**M1:** Random intercept model, homogenous variance error structure
+
+$ln(Price_{i,t})=ln(Salary_{i,y} + Density_{y} + ln(Jobs_{y}) + \alpha_{i,t} + \epsilon_{i,t}$
+
+**M2:**	Random slope, lagged independent variable, homogenous variance error structure
+
+$ln(Price_{i,t}) = ln(Price_{i,t-12}) + ln(Salary_{i,y}) + Destiny_{y} + ln(Jobs_{y}) + Crime_{i,t} + \alpha_{i,t} + \epsilon_{i,t}$
+
+
+**M3:** Random slope, with Autoregressive error (model specification same as above). As the Price for this month may have error correlated with the price for last month, I would expect the error structure to be autoregressive.
+
+**M4:** Random slope with quadratic function (`Crime`), homogenous in error variance
+
+$ln(Price_{i,t}) = ln(Price_{i,t-12}) +ln(Salary_{i,y}) + Density_{y} + ln(Jobs_{y}) + Crime_{i,t} + Crime_{i,t}^2 +\alpha_{i,t} + \epsilon_{i,t}$
+
+**M5** Random slope with quadratic function (`Crime`), autoregressive error 
+
+**M6:** Random slop with quadratic function (`ln(Salary)`), autoregressive error 
+
+$ln(Price_{i,t}) = ln(Price_{i,t-12}) +ln(Salary_{i,y}) +ln(Salary_{i,y})^2 + Density_{y} + ln(Jobs_{y}) + Crime_{i,t} +\alpha_{i,t} + \epsilon_{i,t}$
+
+
+### Codes and results for each model:
+
+**M1:** Random intercept model, homogenous variance error structure
+
+```r
+m1 <- lme(log(average_price) ~ log(mean_salary) + density + log(number_of_jobs),
+            random = ~ 1 | code, df1, method = "ML")
+
+summary(m1)
+```
+
+```
+## Linear mixed-effects model fit by maximum likelihood
+##  Data: df1 
+##     AIC   BIC logLik
+##   -5735 -5694   2874
+## 
+## Random effects:
+##  Formula: ~1 | code
+##         (Intercept) Residual
+## StdDev:       0.857   0.1584
+## 
+## Fixed effects: log(average_price) ~ log(mean_salary) + density + log(number_of_jobs) 
+##                       Value Std.Error   DF t-value p-value
+## (Intercept)         -16.010    0.3423 7092  -46.78       0
+## log(mean_salary)      1.247    0.0192 7092   64.82       0
+## density               0.006    0.0005 7092   12.80       0
+## log(number_of_jobs)   1.288    0.0249 7092   51.66       0
+##  Correlation: 
+##                     (Intr) lg(m_) densty
+## log(mean_salary)    -0.441              
+## density              0.656 -0.310       
+## log(number_of_jobs) -0.713 -0.139 -0.661
+## 
+## Standardized Within-Group Residuals:
+##      Min       Q1      Med       Q3      Max 
+## -4.19080 -0.59888 -0.04488  0.63233  3.93241 
+## 
+## Number of Observations: 7128
+## Number of Groups: 33
+```
+
+
+**M2:**	Random slope, lagged independent variable, homogenous variance error structure
+
+```r
+m2 <- lme(ln_average_price ~ ln_lag1month + ln_mean_salary + crime_rate + density +
+               log(number_of_jobs), random = ~ 1 + crime_rate| code, 
+             data = df1, method = "ML")
+summary(m2)
+```
+
+```
+## Linear mixed-effects model fit by maximum likelihood
+##  Data: df1 
+##      AIC    BIC logLik
+##   -36078 -36009  18049
+## 
+## Random effects:
+##  Formula: ~1 + crime_rate | code
+##  Structure: General positive-definite, Log-Cholesky parametrization
+##             StdDev        Corr  
+## (Intercept) 0.00000067981 (Intr)
+## crime_rate  0.00000000572 0     
+## Residual    0.01923415660       
+## 
+## Fixed effects: ln_average_price ~ ln_lag1month + ln_mean_salary + crime_rate +      density + log(number_of_jobs) 
+##                       Value Std.Error   DF t-value p-value
+## (Intercept)          0.0962  0.012011 7090     8.0  0.0000
+## ln_lag1month         0.9950  0.000694 7090  1434.4  0.0000
+## ln_mean_salary      -0.0072  0.001555 7090    -4.6  0.0000
+## crime_rate          -0.0002  0.000088 7090    -2.3  0.0217
+## density              0.0000  0.000010 7090     4.2  0.0000
+## log(number_of_jobs)  0.0040  0.000787 7090     5.1  0.0000
+##  Correlation: 
+##                     (Intr) ln_lg1 ln_mn_ crm_rt densty
+## ln_lag1month        -0.414                            
+## ln_mean_salary      -0.791 -0.025                     
+## crime_rate          -0.474  0.374  0.463              
+## density              0.561 -0.442 -0.401 -0.672       
+## log(number_of_jobs)  0.487 -0.363 -0.720 -0.588  0.379
+## 
+## Standardized Within-Group Residuals:
+##       Min        Q1       Med        Q3       Max 
+## -19.04851  -0.46541   0.02161   0.49226  13.85167 
+## 
+## Number of Observations: 7128
+## Number of Groups: 33
+```
+
+**M3:** Random slope, with Autoregressive error
+
+```r
+m3 <- update(m2,  correlation=corAR1( form = ~ 1|code))
+summary(m3)
+```
+
+```
+## Linear mixed-effects model fit by maximum likelihood
+##  Data: df1 
+##      AIC    BIC logLik
+##   -36645 -36569  18333
+## 
+## Random effects:
+##  Formula: ~1 + crime_rate | code
+##  Structure: General positive-definite, Log-Cholesky parametrization
+##             StdDev        Corr  
+## (Intercept) 0.00000029831 (Intr)
+## crime_rate  0.00000002524 0     
+## Residual    0.01924312701       
+## 
+## Correlation Structure: AR(1)
+##  Formula: ~1 | code 
+##  Parameter estimate(s):
+##   Phi 
+## 0.279 
+## Fixed effects: ln_average_price ~ ln_lag1month + ln_mean_salary + crime_rate +      density + log(number_of_jobs) 
+##                       Value Std.Error   DF t-value p-value
+## (Intercept)          0.1052  0.015802 7090     6.7  0.0000
+## ln_lag1month         0.9937  0.000916 7090  1084.4  0.0000
+## ln_mean_salary      -0.0071  0.002047 7090    -3.5  0.0006
+## crime_rate          -0.0003  0.000113 7090    -2.4  0.0181
+## density              0.0001  0.000013 7090     3.9  0.0001
+## log(number_of_jobs)  0.0045  0.001033 7090     4.4  0.0000
+##  Correlation: 
+##                     (Intr) ln_lg1 ln_mn_ crm_rt densty
+## ln_lag1month        -0.407                            
+## ln_mean_salary      -0.788 -0.038                     
+## crime_rate          -0.461  0.365  0.451              
+## density              0.552 -0.435 -0.389 -0.662       
+## log(number_of_jobs)  0.475 -0.355 -0.714 -0.576  0.363
+## 
+## Standardized Within-Group Residuals:
+##       Min        Q1       Med        Q3       Max 
+## -19.08534  -0.46270   0.02086   0.49498  13.79426 
+## 
+## Number of Observations: 7128
+## Number of Groups: 33
+```
+
+**M4**	Random slope with quadratic function (`crime_rate`), homogenous in error variance 
+
+```r
+m4 <- lme(ln_average_price ~ ln_lag1month + ln_mean_salary + crime_rate + I(crime_rate^2) 
+             + density + log(number_of_jobs), random = ~ 1 + crime_rate + I(crime_rate^2)| code,              data = df1, method = "ML")
+summary(m4)
+```
+
+```
+## Linear mixed-effects model fit by maximum likelihood
+##  Data: df1 
+##      AIC    BIC logLik
+##   -36082 -35986  18055
+## 
+## Random effects:
+##  Formula: ~1 + crime_rate + I(crime_rate^2) | code
+##  Structure: General positive-definite, Log-Cholesky parametrization
+##                 StdDev     Corr         
+## (Intercept)     0.00791303 (Intr) crm_rt
+## crime_rate      0.00179417 -0.998       
+## I(crime_rate^2) 0.00009466  0.987 -0.994
+## Residual        0.01918073              
+## 
+## Fixed effects: ln_average_price ~ ln_lag1month + ln_mean_salary + crime_rate +      I(crime_rate^2) + density + log(number_of_jobs) 
+##                       Value Std.Error   DF t-value p-value
+## (Intercept)          0.1486  0.016741 7089     8.9       0
+## ln_lag1month         0.9937  0.000828 7089  1200.7       0
+## ln_mean_salary      -0.0104  0.001859 7089    -5.6       0
+## crime_rate          -0.0029  0.000628 7089    -4.7       0
+## I(crime_rate^2)      0.0001  0.000032 7089     4.2       0
+## density              0.0001  0.000013 7089     5.7       0
+## log(number_of_jobs)  0.0046  0.000897 7089     5.2       0
+##  Correlation: 
+##                     (Intr) ln_lg1 ln_mn_ crm_rt I(_^2) densty
+## ln_lag1month        -0.314                                   
+## ln_mean_salary      -0.788 -0.093                            
+## crime_rate          -0.374  0.225  0.164                     
+## I(crime_rate^2)      0.296 -0.116 -0.110 -0.969              
+## density              0.648 -0.460 -0.425 -0.338  0.186       
+## log(number_of_jobs)  0.240 -0.367 -0.523 -0.177  0.084  0.252
+## 
+## Standardized Within-Group Residuals:
+##       Min        Q1       Med        Q3       Max 
+## -19.25931  -0.46448   0.02512   0.49264  13.72745 
+## 
+## Number of Observations: 7128
+## Number of Groups: 33
+```
+
+**M5**	Random slope with quadratic function (`crime_rate`), autoregressive error
+
+```r
+m5<- update(m4, correlation=corAR1( form = ~ 1|code))
+summary(m5)
+```
+
+```
+## Linear mixed-effects model fit by maximum likelihood
+##  Data: df1 
+##      AIC    BIC logLik
+##   -36642 -36539  18336
+## 
+## Random effects:
+##  Formula: ~1 + crime_rate + I(crime_rate^2) | code
+##  Structure: General positive-definite, Log-Cholesky parametrization
+##                 StdDev    Corr         
+## (Intercept)     4.489e-09 (Intr) crm_rt
+## crime_rate      3.818e-08 0            
+## I(crime_rate^2) 1.981e-11 0      0     
+## Residual        1.923e-02              
+## 
+## Correlation Structure: AR(1)
+##  Formula: ~1 | code 
+##  Parameter estimate(s):
+##    Phi 
+## 0.2778 
+## Fixed effects: ln_average_price ~ ln_lag1month + ln_mean_salary + crime_rate +      I(crime_rate^2) + density + log(number_of_jobs) 
+##                       Value Std.Error   DF t-value p-value
+## (Intercept)          0.1299  0.019078 7089     6.8  0.0000
+## ln_lag1month         0.9932  0.000933 7089  1064.7  0.0000
+## ln_mean_salary      -0.0085  0.002136 7089    -4.0  0.0001
+## crime_rate          -0.0009  0.000302 7089    -3.0  0.0025
+## I(crime_rate^2)      0.0000  0.000010 7089     2.3  0.0212
+## density              0.0001  0.000016 7089     4.5  0.0000
+## log(number_of_jobs)  0.0043  0.001034 7089     4.2  0.0000
+##  Correlation: 
+##                     (Intr) ln_lg1 ln_mn_ crm_rt I(_^2) densty
+## ln_lag1month        -0.441                                   
+## ln_mean_salary      -0.787  0.022                            
+## crime_rate          -0.665  0.317  0.432                     
+## I(crime_rate^2)      0.563 -0.197 -0.292 -0.927              
+## density              0.686 -0.466 -0.470 -0.704  0.533       
+## log(number_of_jobs)  0.348 -0.332 -0.658 -0.144 -0.077  0.266
+## 
+## Standardized Within-Group Residuals:
+##      Min       Q1      Med       Q3      Max 
+## -19.1852  -0.4613   0.0228   0.4951  13.7171 
+## 
+## Number of Observations: 7128
+## Number of Groups: 33
+```
+
+**M6** Random slop with quadratic function (`ln(salary)`), autoregressive error 
+
+```r
+m6 <- lme(ln_average_price ~ ln_lag1month + I(ln_mean_salary^2) + ln_mean_salary
+             + crime_rate + density + log(number_of_jobs), random = ~ 1 + crime_rate| code, 
+             data = df1, method = "ML", correlation=corAR1( form = ~ 1|code))
+summary(m6)
+```
+
+```
+## Linear mixed-effects model fit by maximum likelihood
+##  Data: df1 
+##      AIC    BIC logLik
+##   -36648 -36566  18336
+## 
+## Random effects:
+##  Formula: ~1 + crime_rate | code
+##  Structure: General positive-definite, Log-Cholesky parametrization
+##             StdDev        Corr  
+## (Intercept) 0.00000024152 (Intr)
+## crime_rate  0.00000001515 0     
+## Residual    0.01922140645       
+## 
+## Correlation Structure: AR(1)
+##  Formula: ~1 | code 
+##  Parameter estimate(s):
+##    Phi 
+## 0.2766 
+## Fixed effects: ln_average_price ~ ln_lag1month + I(ln_mean_salary^2) + ln_mean_salary +      crime_rate + density + log(number_of_jobs) 
+##                       Value Std.Error   DF t-value p-value
+## (Intercept)          0.9696    0.3640 7089     2.7  0.0077
+## ln_lag1month         0.9947    0.0010 7089   989.9  0.0000
+## I(ln_mean_salary^2)  0.0077    0.0032 7089     2.4  0.0175
+## ln_mean_salary      -0.1706    0.0688 7089    -2.5  0.0132
+## crime_rate          -0.0002    0.0001 7089    -1.7  0.0864
+## density              0.0001    0.0000 7089     3.9  0.0001
+## log(number_of_jobs)  0.0039    0.0011 7089     3.6  0.0003
+##  Correlation: 
+##                     (Intr) ln_lg1 I(__^2 ln_mn_ crm_rt densty
+## ln_lag1month         0.401                                   
+## I(ln_mean_salary^2)  0.999  0.418                            
+## ln_mean_salary      -1.000 -0.419 -1.000                     
+## crime_rate           0.224  0.424  0.243 -0.230              
+## density              0.027 -0.394  0.003 -0.014 -0.641       
+## log(number_of_jobs) -0.235 -0.418 -0.255  0.234 -0.602  0.351
+## 
+## Standardized Within-Group Residuals:
+##       Min        Q1       Med        Q3       Max 
+## -19.06608  -0.46586   0.01994   0.49543  13.85463 
+## 
+## Number of Observations: 7128
+## Number of Groups: 33
+```
+
+###4. Discussion
+
+The ANOVA test for M2 and M3 has very small p-value, indicating that M2 and M3, although share the same specification, are actually 2 different models. 
+
+
+Model 2,3,4,5 and 6 do consider crime rate and lagged variable of the previous month house values. The added lagged variable would help to decrease the model variance as there are could be unobserved variables that are left in the error term. In the exploratory part (not shown here for the purpose of presentation), I tried with several numbers of lagged month. There was not much difference among the months chosen and last month's price correlate with current prices the most; thus, I chose only 1 month lagged for this variable. Model 3 accounts for the autoregressive
+
+
+Model 3,5,6 accounts for the autoregressive error structure, which I would very much expect in this context while model 2 does not. In the information criterion table, it is evident that model 3,5,6  perform better model 2 in most of the criteria (AIC and BIC values).
+
+
+
+
+```r
+knitr::kable(anova(m2, m3, m4, m5, m6), caption = "Table 5: ANOVA for 4 models",  booktabs = T)%>%
+  kable_styling(latex_options = "striped")
+```
+
+<table class="table" style="margin-left: auto; margin-right: auto;">
+<caption>Table 5: ANOVA for 4 models</caption>
+ <thead>
+  <tr>
+   <th style="text-align:left;">   </th>
+   <th style="text-align:left;"> call </th>
+   <th style="text-align:right;"> Model </th>
+   <th style="text-align:right;"> df </th>
+   <th style="text-align:right;"> AIC </th>
+   <th style="text-align:right;"> BIC </th>
+   <th style="text-align:right;"> logLik </th>
+   <th style="text-align:left;"> Test </th>
+   <th style="text-align:right;"> L.Ratio </th>
+   <th style="text-align:right;"> p-value </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> m2 </td>
+   <td style="text-align:left;"> lme.formula(fixed = ln_average_price ~ ln_lag1month + ln_mean_salary +     crime_rate + density + log(number_of_jobs), data = df1, random = ~1 +     crime_rate | code, method = "ML") </td>
+   <td style="text-align:right;"> 1 </td>
+   <td style="text-align:right;"> 10 </td>
+   <td style="text-align:right;"> -36078 </td>
+   <td style="text-align:right;"> -36009 </td>
+   <td style="text-align:right;"> 18049 </td>
+   <td style="text-align:left;">  </td>
+   <td style="text-align:right;"> NA </td>
+   <td style="text-align:right;"> NA </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> m3 </td>
+   <td style="text-align:left;"> lme.formula(fixed = ln_average_price ~ ln_lag1month + ln_mean_salary +     crime_rate + density + log(number_of_jobs), data = df1, random = ~1 +     crime_rate | code, correlation = corAR1(form = ~1 | code),     method = "ML") </td>
+   <td style="text-align:right;"> 2 </td>
+   <td style="text-align:right;"> 11 </td>
+   <td style="text-align:right;"> -36645 </td>
+   <td style="text-align:right;"> -36569 </td>
+   <td style="text-align:right;"> 18333 </td>
+   <td style="text-align:left;"> 1 vs 2 </td>
+   <td style="text-align:right;"> 568.5136 </td>
+   <td style="text-align:right;"> 0.0000 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> m4 </td>
+   <td style="text-align:left;"> lme.formula(fixed = ln_average_price ~ ln_lag1month + ln_mean_salary +     crime_rate + I(crime_rate^2) + density + log(number_of_jobs),     data = df1, random = ~1 + crime_rate + I(crime_rate^2) |         code, method = "ML") </td>
+   <td style="text-align:right;"> 3 </td>
+   <td style="text-align:right;"> 14 </td>
+   <td style="text-align:right;"> -36082 </td>
+   <td style="text-align:right;"> -35986 </td>
+   <td style="text-align:right;"> 18055 </td>
+   <td style="text-align:left;"> 2 vs 3 </td>
+   <td style="text-align:right;"> 556.2265 </td>
+   <td style="text-align:right;"> 0.0000 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> m5 </td>
+   <td style="text-align:left;"> lme.formula(fixed = ln_average_price ~ ln_lag1month + ln_mean_salary +     crime_rate + I(crime_rate^2) + density + log(number_of_jobs),     data = df1, random = ~1 + crime_rate + I(crime_rate^2) |         code, correlation = corAR1(form = ~1 | code), method = "ML") </td>
+   <td style="text-align:right;"> 4 </td>
+   <td style="text-align:right;"> 15 </td>
+   <td style="text-align:right;"> -36642 </td>
+   <td style="text-align:right;"> -36539 </td>
+   <td style="text-align:right;"> 18336 </td>
+   <td style="text-align:left;"> 3 vs 4 </td>
+   <td style="text-align:right;"> 561.5312 </td>
+   <td style="text-align:right;"> 0.0000 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> m6 </td>
+   <td style="text-align:left;"> lme.formula(fixed = ln_average_price ~ ln_lag1month + I(ln_mean_salary^2) +     ln_mean_salary + crime_rate + density + log(number_of_jobs),     data = df1, random = ~1 + crime_rate | code, correlation = corAR1(form = ~1 |         code), method = "ML") </td>
+   <td style="text-align:right;"> 5 </td>
+   <td style="text-align:right;"> 12 </td>
+   <td style="text-align:right;"> -36648 </td>
+   <td style="text-align:right;"> -36566 </td>
+   <td style="text-align:right;"> 18336 </td>
+   <td style="text-align:left;"> 4 vs 5 </td>
+   <td style="text-align:right;"> 0.3045 </td>
+   <td style="text-align:right;"> 0.9592 </td>
+  </tr>
+</tbody>
+</table>
+
+With all of the above explanation, I am going to investigate each model in the following part to see which ones are more interpretable.
+
+#### Interpretation of M3:
+
+
+```r
+summary(m3)
+```
+
+```
+## Linear mixed-effects model fit by maximum likelihood
+##  Data: df1 
+##      AIC    BIC logLik
+##   -36645 -36569  18333
+## 
+## Random effects:
+##  Formula: ~1 + crime_rate | code
+##  Structure: General positive-definite, Log-Cholesky parametrization
+##             StdDev        Corr  
+## (Intercept) 0.00000029831 (Intr)
+## crime_rate  0.00000002524 0     
+## Residual    0.01924312701       
+## 
+## Correlation Structure: AR(1)
+##  Formula: ~1 | code 
+##  Parameter estimate(s):
+##   Phi 
+## 0.279 
+## Fixed effects: ln_average_price ~ ln_lag1month + ln_mean_salary + crime_rate +      density + log(number_of_jobs) 
+##                       Value Std.Error   DF t-value p-value
+## (Intercept)          0.1052  0.015802 7090     6.7  0.0000
+## ln_lag1month         0.9937  0.000916 7090  1084.4  0.0000
+## ln_mean_salary      -0.0071  0.002047 7090    -3.5  0.0006
+## crime_rate          -0.0003  0.000113 7090    -2.4  0.0181
+## density              0.0001  0.000013 7090     3.9  0.0001
+## log(number_of_jobs)  0.0045  0.001033 7090     4.4  0.0000
+##  Correlation: 
+##                     (Intr) ln_lg1 ln_mn_ crm_rt densty
+## ln_lag1month        -0.407                            
+## ln_mean_salary      -0.788 -0.038                     
+## crime_rate          -0.461  0.365  0.451              
+## density              0.552 -0.435 -0.389 -0.662       
+## log(number_of_jobs)  0.475 -0.355 -0.714 -0.576  0.363
+## 
+## Standardized Within-Group Residuals:
+##       Min        Q1       Med        Q3       Max 
+## -19.08534  -0.46270   0.02086   0.49498  13.79426 
+## 
+## Number of Observations: 7128
+## Number of Groups: 33
+```
+
+All the p-values for the estimated coefficients are smaller than 0.05, which indicates that the model all estimated coefficients are statistically different to 0. The results for crime rate (negative effect), density (positive effect) and number of jobs (positive effect) are to be expected. However, mean salary has a negative effect of house price, which is surprising. Coming back to the dat visualization, I found out that while price of property always increases; resident's salary came to a stagnant around 2008.
+
+Thus, I will choose the models with `ln(salary)` and `ln(salary)^2` only to minimize the obmitted variable bias. Only M6 satisfies this condition (and the autoregressive error form)
+
+#### Interpretation of M6:
+
+
+```r
+summary(m6)
+```
+
+```
+## Linear mixed-effects model fit by maximum likelihood
+##  Data: df1 
+##      AIC    BIC logLik
+##   -36648 -36566  18336
+## 
+## Random effects:
+##  Formula: ~1 + crime_rate | code
+##  Structure: General positive-definite, Log-Cholesky parametrization
+##             StdDev        Corr  
+## (Intercept) 0.00000024152 (Intr)
+## crime_rate  0.00000001515 0     
+## Residual    0.01922140645       
+## 
+## Correlation Structure: AR(1)
+##  Formula: ~1 | code 
+##  Parameter estimate(s):
+##    Phi 
+## 0.2766 
+## Fixed effects: ln_average_price ~ ln_lag1month + I(ln_mean_salary^2) + ln_mean_salary +      crime_rate + density + log(number_of_jobs) 
+##                       Value Std.Error   DF t-value p-value
+## (Intercept)          0.9696    0.3640 7089     2.7  0.0077
+## ln_lag1month         0.9947    0.0010 7089   989.9  0.0000
+## I(ln_mean_salary^2)  0.0077    0.0032 7089     2.4  0.0175
+## ln_mean_salary      -0.1706    0.0688 7089    -2.5  0.0132
+## crime_rate          -0.0002    0.0001 7089    -1.7  0.0864
+## density              0.0001    0.0000 7089     3.9  0.0001
+## log(number_of_jobs)  0.0039    0.0011 7089     3.6  0.0003
+##  Correlation: 
+##                     (Intr) ln_lg1 I(__^2 ln_mn_ crm_rt densty
+## ln_lag1month         0.401                                   
+## I(ln_mean_salary^2)  0.999  0.418                            
+## ln_mean_salary      -1.000 -0.419 -1.000                     
+## crime_rate           0.224  0.424  0.243 -0.230              
+## density              0.027 -0.394  0.003 -0.014 -0.641       
+## log(number_of_jobs) -0.235 -0.418 -0.255  0.234 -0.602  0.351
+## 
+## Standardized Within-Group Residuals:
+##       Min        Q1       Med        Q3       Max 
+## -19.06608  -0.46586   0.01994   0.49543  13.85463 
+## 
+## Number of Observations: 7128
+## Number of Groups: 33
+```
+
+The results for M6 is much more interpretable as almost all of the estimated coeeficients are reasonable. The model provides an explanation on what and how each factor at a yearly level affect monthly prices. However, due to insufficient data (on unemployment rate, pollution level, convenient score for example), there could be some omitted variable bias that can affect the magnitude of effect.
+
+[1]:  https://www.kaggle.com/justinas/housing-in-london#housing_in_london_yearly_variables.csv "Data"
