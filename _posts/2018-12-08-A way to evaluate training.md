@@ -1,6 +1,7 @@
 When I was working at a Training Center during my pre-MBA career, I came across several raised eyebrows questioning the Training Center's effectiveness. In the face of skepticism, the Head of the Training Center remained calmed and showed the statistics of employee satisfaction on the course. It was always higher than 4.9/5 for each and every course offered by the center. At that moment, it was my eyebrow's turn to raise.
 
 **So is there a way to tell if training activities are effective, besides the course satisfaction survey?**
+
 *Answer: Yes, and here are my 2 cents in form of a long and boring blog post. *
 
 ### 1. Why course satisfaction can be misleading metrics to follow?
