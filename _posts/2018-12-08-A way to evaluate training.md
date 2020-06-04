@@ -44,5 +44,11 @@ In these case, we may want to categorize the groups of participants, separate th
 
 
 #### 2.4 Random Encouragement Design
-For the last 3 examples, we have been in a training-enthusiastic organization. How about evaluating training initiative in en organization that is less keen on these training sessions.
+For the last 3 examples, we have been in a training-enthusiastic organization. How about evaluating training initiative in en organization that is less keen on these training sessions. In this situation, you would have the luxury to *choose* the participants, not to say randomly chooose them. Thus, I would recommend another method to conduct the experiment: randomly invite them to the training.
+
+**How to conduct analysis** Link to RPubs
+
+**How to interprete the results** Link to RPubs
+
+I hope with these toolkits you would be able to conduct the experiment in any scenarinos. Let me know if there is anything lingering in your mind about these tools!
 
